@@ -47,6 +47,12 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2025-12-19: Deterministic document classifier
+  - Pydantic-based DocumentClassification model
+  - Supports TITLE_REGISTER, TA6, SEARCH, LEASE, UNKNOWN
+  - Returns UNKNOWN if multiple document types match (ambiguity)
+  - Human-readable reason field for audit trail
+  - classify_document() function for routing to correct extraction pipeline
 - 2025-12-19: Robust OCR fallback mechanism
   - Uses prebuilt-document model (more comprehensive than layout)
   - Implements page-split fallback using pypdf for multi-page PDFs

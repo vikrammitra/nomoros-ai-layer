@@ -1,0 +1,114 @@
+You are extending an existing **Python FastAPI backend** for a legal conveyancing AI system.
+
+Objective:
+Implement a **deterministic, rule-based document classifier** using a **Pydantic model**.
+This classifier is used only for **routing documents to the correct extraction and risk pipeline**.
+
+Scope rules (must follow strictly):
+
+* Do NOT use LLMs
+* Do NOT use ML or probabilistic logic
+* Do NOT add UI, agents, LangGraph, or databases
+* Do NOT modify OCR, extraction, or risk logic
+* Implement classification logic only
+
+Create a Pydantic model:
+
+File: `models/classification.py`
+
+```python
+from pydantic import BaseModel
+from typing import Literal
+
+class DocumentClassification(BaseModel):
+    document_type: Literal[
+        "TITLE_REGISTER",
+        "TA6",
+        "SEARCH",
+        "LEASE",
+        "UNKNOWN"
+    ]
+    reason: str
+```
+
+Create the classifier module:
+
+File: `services/classify.py`
+
+Implement:
+
+```python
+def classify_document(text: str) -> DocumentClassification:
+    ...
+```
+
+Deterministic classification rules (use these exactly):
+
+TITLE_REGISTER:
+
+* Match if text contains any of:
+
+  * "official copy of the register"
+  * "property register"
+  * "charges register"
+  * "hm land registry"
+
+TA6:
+
+* Match if text contains any of:
+
+  * "ta6"
+  * "property information form"
+  * "boundaries"
+  * "disputes and complaints"
+
+SEARCH:
+
+* Match if text contains any of:
+
+  * "local authority search"
+  * "con29"
+  * "llc1"
+  * "planning permissions"
+
+LEASE:
+
+* Match if text contains any of:
+
+  * "term of years"
+  * "landlord"
+  * "tenant"
+  * "ground rent"
+
+UNKNOWN:
+
+* If no rules match, or if **more than one document type matches**
+
+Implementation requirements:
+
+* Case-insensitive matching
+* Prefer explicit legal headings over generic words
+* If multiple document types match, return:
+
+  * document_type = "UNKNOWN"
+  * reason explaining ambiguity
+* Always populate the `reason` field with a human-readable explanation
+* Keep logic simple, explicit, and well-commented
+
+Example return value:
+
+```json
+{
+  "document_type": "TITLE_REGISTER",
+  "reason": "Detected HM Land Registry headings: Property Register, Charges Register"
+}
+```
+
+Integration guidance:
+
+* This classifier will be called immediately after OCR
+* Downstream extraction and risk logic will branch based on `document_type`
+* The Pydantic model is required to ensure schema consistency and auditability
+
+Deliverable:
+A deterministic, Pydantic-based document classifier suitable for routing conveyancing documents (Title Register, TA6, Searches, Lease) in a legally defensible and explainable way.
