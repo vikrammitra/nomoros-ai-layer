@@ -104,7 +104,11 @@ async def ingest_document(file: UploadFile = File(...)) -> DocumentIngestionResp
             return DocumentIngestionResponse(
                 success=False,
                 message="Document processing failed",
-                error=result.error_message
+                error=result.error_message,
+                page_count=result.page_count,
+                file_size_mb=result.file_size_mb,
+                processing_mode=result.processing_mode,
+                chunks_processed=result.chunks_processed
             )
         
         # Create text preview (first 500 characters)
@@ -112,12 +116,21 @@ async def ingest_document(file: UploadFile = File(...)) -> DocumentIngestionResp
         if len(result.text_content) > 500:
             text_preview += "..."
         
+        # Build success message with processing mode info
+        if result.processing_mode == "chunked":
+            message = f"Successfully extracted text from {result.page_count} page(s) using chunked processing ({result.chunks_processed} chunks)"
+        else:
+            message = f"Successfully extracted text from {result.page_count} page(s)"
+        
         return DocumentIngestionResponse(
             success=True,
-            message=f"Successfully extracted text from {result.page_count} page(s)",
+            message=message,
             page_count=result.page_count,
             text_preview=text_preview,
-            full_text=result.text_content
+            full_text=result.text_content,
+            file_size_mb=result.file_size_mb,
+            processing_mode=result.processing_mode,
+            chunks_processed=result.chunks_processed
         )
         
     finally:

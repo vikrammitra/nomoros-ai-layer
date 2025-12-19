@@ -47,6 +47,12 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2025-12-19: Size-aware chunked OCR processing
+  - Configurable limits: MAX_SYNC_FILE_SIZE_MB (4MB), MAX_SYNC_PAGES (10)
+  - Automatic chunking for large PDFs (Search packs, TA6, Leases)
+  - Sequential chunk processing with graceful per-chunk error handling
+  - Response metadata: file_size_mb, processing_mode, chunks_processed
+  - Tested with 56-page, 4.9MB environmental report (12 chunks, 45K chars extracted)
 - 2025-12-19: Deterministic document classifier
   - Pydantic-based DocumentClassification model
   - Supports TITLE_REGISTER, TA6, SEARCH, LEASE, UNKNOWN

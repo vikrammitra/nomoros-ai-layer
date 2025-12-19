@@ -1,0 +1,64 @@
+You are modifying an existing **Python FastAPI backend** that ingests legal PDFs and performs OCR using Azure Document Intelligence.
+
+Context:
+
+* OCR works correctly for small PDFs (e.g. Title Registers)
+* Large PDFs (e.g. Search packs, TA6, Leases) exceed size or time limits
+* Downstream extraction and risk logic already exists and must NOT be changed
+
+Objective:
+Implement **size-aware and page-aware chunking** in the OCR layer so large PDFs are handled safely and predictably.
+
+Scope rules (must follow strictly):
+
+* Do NOT add new endpoints
+* Do NOT modify extraction or risk logic
+* Do NOT add async infrastructure (queues, workers)
+* Modify OCR ingestion logic only
+* Keep behaviour backward compatible for small files
+
+Functional requirements:
+
+1. Introduce configurable limits:
+
+   * `MAX_SYNC_FILE_SIZE_MB` (e.g. 4 MB)
+   * `MAX_SYNC_PAGES` (e.g. 10 pages)
+
+2. When a PDF is ingested:
+
+   * Detect file size (MB) and page count
+   * If within limits:
+
+     * Process normally using existing Azure OCR flow
+   * If limits are exceeded:
+
+     * Split the PDF into page-based chunks using `pypdf`
+     * OCR each chunk sequentially using Azure Document Intelligence
+     * Concatenate extracted text in correct page order
+
+3. Chunking rules:
+
+   * Each chunk should contain a small number of pages (e.g. 5 pages max)
+   * Preserve page boundaries in the final text output (e.g. `--- Page X ---`)
+   * Handle failures gracefully per chunk (do not fail entire document)
+
+4. The OCR service must return metadata including:
+
+   * `page_count`
+   * `file_size_mb`
+   * `processing_mode`: `"sync"` or `"chunked"`
+   * `chunks_processed` (integer)
+
+5. All logic must live inside the existing OCR service layer
+
+6. Add inline comments explaining that this is required for large Search / TA6 PDFs
+
+7. Keep code explicit, readable, and defensive
+
+Deliverable:
+An updated OCR ingestion service that:
+
+* Processes small PDFs synchronously
+* Automatically chunks large PDFs
+* Never fails silently due to size limits
+* Enables stable ingestion of large Search packs and TA6 documents

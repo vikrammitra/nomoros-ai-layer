@@ -20,6 +20,9 @@ class DocumentIngestionResponse(BaseModel):
         text_preview: Preview of extracted text (first 500 characters)
         full_text: Complete extracted text (optional, can be large)
         error: Error message if processing failed
+        file_size_mb: Size of the uploaded file in megabytes
+        processing_mode: "sync" for small files, "chunked" for large files
+        chunks_processed: Number of chunks processed (0 for sync mode)
     """
     success: bool
     message: str
@@ -27,6 +30,9 @@ class DocumentIngestionResponse(BaseModel):
     text_preview: Optional[str] = None
     full_text: Optional[str] = None
     error: Optional[str] = None
+    file_size_mb: float = 0.0
+    processing_mode: str = "sync"
+    chunks_processed: int = 0
 
 
 class HealthResponse(BaseModel):
