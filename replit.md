@@ -47,6 +47,12 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2025-12-19: Robust OCR fallback mechanism
+  - Uses prebuilt-document model (more comprehensive than layout)
+  - Implements page-split fallback using pypdf for multi-page PDFs
+  - Compares primary vs page-split content length, uses whichever has more
+  - Tracks fallback_strategy (PRIMARY, PAGE_SPLIT, CONTENT_FALLBACK) for auditability
+  - Resolves issue where page 2+ content was missing from HM Land Registry PDFs
 - 2025-12-19: Phase 2 - Title Register extraction and risk analysis
   - Document classification service (detect Title Register)
   - TitleRegisterExtraction Pydantic model
