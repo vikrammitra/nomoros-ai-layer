@@ -1,7 +1,7 @@
 """
 Document processing router.
 
-Handles document ingestion and OCR extraction endpoints.
+Handles document ingestion, OCR extraction, and title risk analysis endpoints.
 """
 
 from fastapi import APIRouter, File, UploadFile, HTTPException
@@ -11,7 +11,12 @@ from nomoros_ai.services.ocr.azure_doc_intelligence import (
     AzureDocumentIntelligenceService,
     ExtractionResult
 )
+from nomoros_ai.services.classify import DocumentClassifier
+from nomoros_ai.services.extract.title import TitleExtractor
+from nomoros_ai.services.risk.title_rules import TitleRiskAnalyzer
 from nomoros_ai.models.document import DocumentIngestionResponse
+from nomoros_ai.models.request import TitleRiskRequest
+from nomoros_ai.models.title import TitleRiskResponse
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -118,3 +123,58 @@ async def ingest_document(file: UploadFile = File(...)) -> DocumentIngestionResp
     finally:
         # Clean up client resources
         ocr_service.close()
+
+
+@router.post("/title-risk", response_model=TitleRiskResponse)
+async def analyze_title_risk(request: TitleRiskRequest) -> TitleRiskResponse:
+    """
+    Analyze OCR text from a Title Register for risks.
+    
+    This endpoint:
+    1. Classifies the document to confirm it's a Title Register
+    2. Extracts structured data (title number, proprietors, restrictions, etc.)
+    3. Applies rule-based risk analysis
+    4. Returns structured risk assessment suitable for a dashboard
+    
+    Args:
+        request: TitleRiskRequest containing OCR text
+        
+    Returns:
+        TitleRiskResponse with extraction and risk analysis
+        
+    Raises:
+        HTTPException: If document is not a Title Register
+    """
+    ocr_text = request.ocr_text
+    
+    if not ocr_text or not ocr_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="OCR text is required"
+        )
+    
+    # Step 1: Classify the document
+    classifier = DocumentClassifier()
+    classification = classifier.classify(ocr_text)
+    
+    if classification.document_type != "Title Register":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Document is not a Title Register. Detected type: {classification.document_type}"
+        )
+    
+    # Step 2: Extract structured data from the title
+    extractor = TitleExtractor()
+    extraction = extractor.extract(ocr_text)
+    
+    # Step 3: Analyze risks using rule-based engine
+    risk_analyzer = TitleRiskAnalyzer()
+    risk_summary, detailed_risks = risk_analyzer.analyze(extraction)
+    
+    # Step 4: Build and return response
+    return TitleRiskResponse(
+        document_type=classification.document_type,
+        extraction=extraction,
+        risk_summary=risk_summary,
+        detailed_risks=detailed_risks
+    )

@@ -1,0 +1,104 @@
+You are extending an existing **Python FastAPI backend** called `nomoros_ai_api`.
+
+Context:
+
+* Azure Document Intelligence OCR is already working
+* `/documents/ingest` returns extracted text successfully
+* This service supports a legal conveyancing product
+* Focus ONLY on Title Register documents in this phase
+
+Objective (Phase 2):
+Implement **structured extraction and risk analysis for HM Land Registry Title Registers**, producing deterministic, solicitor-defensible outputs.
+
+Design rules (must follow):
+
+* No UI code
+* No chat functionality
+* No agents or LangGraph
+* No database yet
+* Use Pydantic for all structured data
+* LLMs may be used ONLY for extraction, not risk decisions
+* Risk severity must be rule-based
+
+New functionality to add:
+
+1. **Document classification**
+
+   * Detect if extracted text is a "Title Register"
+   * Use simple deterministic heuristics (headings, keywords)
+
+2. **Pydantic extraction model**
+   Create a model called `TitleRegisterExtraction` with fields:
+
+   * title_number
+   * edition_date
+   * property_description
+   * proprietors (list)
+   * title_class (e.g. Freehold, Possessory)
+   * restrictions (list)
+
+3. **Title extraction service**
+
+   * Accept OCR text
+   * Populate the `TitleRegisterExtraction` model
+   * Stub the extraction logic initially if needed
+   * Structure code so an LLM can be plugged in later
+
+4. **Rule-based risk detection**
+   Implement the following rules:
+
+   * If `title_class` is "Possessory" → High risk
+   * If one or more `restrictions` exist → Medium risk
+   * Risks must include:
+
+     * category = "Title & Ownership"
+     * severity (High / Medium)
+     * human-readable description
+
+5. **New endpoint**
+   Add:
+   POST `/documents/title-risk`
+
+   * Accept extracted OCR text
+   * Classify document
+   * Extract structured title data
+   * Apply risk rules
+   * Return JSON suitable for a dashboard
+
+Example response shape:
+{
+"document_type": "Title Register",
+"extraction": { ...structured fields... },
+"risk_summary": {
+"category": "Title & Ownership",
+"severity": "High",
+"risk_count": 2,
+"risks": [
+"Title is possessory; indemnity insurance likely required",
+"Restrictions on disposition identified"
+],
+"confidence": 0.9
+}
+}
+
+Project structure to extend:
+
+services/
+classify.py
+extract/
+title.py
+risk/
+title_rules.py
+
+models/
+title.py
+
+Implementation guidance:
+
+* Keep code explicit and readable
+* Add comments explaining legal rationale
+* Prefer simple logic over abstraction
+* Assume this will later be audited by solicitors
+
+Deliverable:
+A working FastAPI backend that can take OCR text from a Title Register and return structured title risks in a deterministic, explainable way.
