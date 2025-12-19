@@ -217,13 +217,19 @@ class TitleExtractor:
         
         Legal significance: Restrictions can delay or prevent
         transactions if not properly addressed.
+        
+        Common restriction types:
+        1. Certificate restrictions - require conveyancer certificate of compliance
+        2. Consent restrictions - require written consent from named party
         """
         restrictions = []
         
-        # Pattern for RESTRICTION entries
-        # Format: (DATE) RESTRICTION: full text until "apply to the disposition" or "have been complied with"
+        # Pattern for RESTRICTION entries - captures multiple ending phrases:
+        # - "apply to the disposition" (certificate type)
+        # - "have been complied with" (certificate type)
+        # - "or their conveyancer" (consent type - e.g., T A Fisher & Sons)
         # Date pattern allows for OCR artifacts like spaces: (22.08. 2018) or (22.08.2018)
-        pattern = r"\((\d{2}\.\s*\d{2}\.\s*\d{4})\)\s*RESTRICTION:\s*(.*?(?:apply to the disposition|have been complied with)[^.]*\.)"
+        pattern = r"\((\d{2}\.\s*\d{2}\.\s*\d{4})\)\s*RESTRICTION:\s*(.*?(?:apply to the disposition|have been complied with|or their conveyancer)[^.]*\.)"
         
         matches = re.finditer(pattern, text, re.IGNORECASE | re.DOTALL)
         

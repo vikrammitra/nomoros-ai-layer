@@ -90,8 +90,8 @@ class AzureDocumentIntelligenceService:
             client = self._get_client()
             
             # Analyze document using prebuilt-layout model
-            # This model extracts text, tables, and structure without
-            # performing any domain-specific analysis
+            # This model extracts text, tables, and structure
+            # Note: Some Land Registry PDFs may have page extraction issues
             poller = client.begin_analyze_document(
                 model_id="prebuilt-layout",
                 document=pdf_content
@@ -100,26 +100,29 @@ class AzureDocumentIntelligenceService:
             # Wait for the analysis to complete
             result = poller.result()
             
-            # Extract text content from all pages
-            text_parts = []
-            page_count = 0
+            # Get page count
+            page_count = len(result.pages) if result.pages else 0
             
-            for page in result.pages:
-                page_count += 1
-                page_text_parts = []
+            # Use result.content for complete text extraction
+            # This provides all text in reading order across all pages
+            # and is more reliable than iterating through page.lines
+            if result.content:
+                full_text = result.content
+            else:
+                # Fallback: Extract text from lines per page
+                text_parts = []
+                for page_num, page in enumerate(result.pages, 1):
+                    page_text_parts = []
+                    
+                    if page.lines:
+                        for line in page.lines:
+                            page_text_parts.append(line.content)
+                    
+                    if page_text_parts:
+                        text_parts.append(f"--- Page {page_num} ---")
+                        text_parts.extend(page_text_parts)
                 
-                # Extract text from lines (maintains reading order)
-                if page.lines:
-                    for line in page.lines:
-                        page_text_parts.append(line.content)
-                
-                # Add page separator for multi-page documents
-                if page_text_parts:
-                    text_parts.append(f"--- Page {page_count} ---")
-                    text_parts.extend(page_text_parts)
-            
-            # Combine all text with newlines
-            full_text = "\n".join(text_parts)
+                full_text = "\n".join(text_parts)
             
             return ExtractionResult(
                 success=True,
