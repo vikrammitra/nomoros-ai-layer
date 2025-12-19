@@ -1,0 +1,108 @@
+You are extending an existing **Python FastAPI backend** for a legal conveyancing AI system.
+
+Context:
+
+* OCR (Azure Document Intelligence) is robust and size-aware
+* Deterministic document classification already exists
+* Title Register extraction and risk logic already exist
+* Large SEARCH PDFs are now successfully chunked and OCR’d
+
+Objective:
+Implement **SEARCH extraction v1**, limited strictly to **Environmental Search reports**, and apply **deterministic environmental risk rules**.
+
+Scope limits (must follow strictly):
+
+* Do NOT modify OCR or chunking logic
+* Do NOT modify Title Register logic
+* Do NOT add TA6 or Lease extraction
+* Do NOT add async infrastructure
+* Do NOT use LLMs for risk decisions
+* Implement SEARCH extraction + risk rules ONLY for environmental findings
+
+New components to add:
+
+1. **Pydantic extraction model**
+   Create file: `models/search_environmental.py`
+
+Model name: `EnvironmentalSearchExtraction`
+
+Fields:
+
+* flood_risk: Literal["None", "Low", "Medium", "High", "Unknown"]
+* contaminated_land: bool | None
+* historic_industrial_use: bool | None
+* mining_or_subsidence: bool | None
+* further_action_required: bool | None
+* source_sections: list[str]
+
+2. **SEARCH environmental extraction service**
+   Create file: `services/extract/search_environmental.py`
+
+Responsibilities:
+
+* Accept OCR text for a SEARCH document
+* Focus only on Environmental / Flood / Contamination sections
+* Use deterministic text pattern matching (headings + keywords)
+* Populate the `EnvironmentalSearchExtraction` model
+* Leave fields as `None` or `"Unknown"` if not determinable
+* Add comments explaining typical UK Environmental Search structure
+
+3. **SEARCH environmental risk rules**
+   Create file: `services/risk/search_environmental_rules.py`
+
+Implement deterministic rules:
+
+* If flood_risk is "High" or "Medium" → 🔴 High risk
+* If contaminated_land is True → 🔴 High risk
+* If mining_or_subsidence is True → 🟠 Medium risk
+* If historic_industrial_use is True → 🟠 Medium risk
+* If further_action_required is True → 🟠 Medium risk
+
+Each risk must include:
+
+* category = "Searches – Environmental"
+* severity ("High" / "Medium")
+* clear, solicitor-readable description
+
+4. **Orchestration hook**
+
+* When classifier returns document_type = "SEARCH"
+* Route OCR text to the environmental extraction service
+* Apply environmental risk rules
+* Return structured output suitable for the existing risk summary UI
+
+Example response shape:
+
+```json
+{
+  "document_type": "SEARCH",
+  "subtype": "Environmental",
+  "extraction": {
+    "flood_risk": "High",
+    "contaminated_land": false,
+    "historic_industrial_use": true,
+    "mining_or_subsidence": null,
+    "further_action_required": true
+  },
+  "risk_summary": {
+    "category": "Searches – Environmental",
+    "severity": "High",
+    "risk_count": 2,
+    "risks": [
+      "Property identified within Flood Zone 2",
+      "Historic industrial land use identified; further investigation recommended"
+    ]
+  }
+}
+```
+
+Implementation guidance:
+
+* Keep logic explicit and readable
+* Prefer false negatives over false positives
+* Never infer risk severity using an LLM
+* Add inline comments explaining legal relevance
+* Assume output may be reviewed by conveyancing solicitors
+
+Deliverable:
+A working SEARCH Environmental extraction and risk pipeline (v1) that reliably flags flood, contamination, and related environmental risks from large Search PDFs using deterministic logic.

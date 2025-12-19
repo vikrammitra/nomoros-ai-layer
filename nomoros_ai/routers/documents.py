@@ -11,12 +11,15 @@ from nomoros_ai.services.ocr.azure_doc_intelligence import (
     AzureDocumentIntelligenceService,
     ExtractionResult
 )
-from nomoros_ai.services.classify import DocumentClassifier
+from nomoros_ai.services.classify import DocumentClassifier, classify_document
 from nomoros_ai.services.extract.title import TitleExtractor
+from nomoros_ai.services.extract.search_environmental import EnvironmentalSearchExtractor
 from nomoros_ai.services.risk.title_rules import TitleRiskAnalyzer
+from nomoros_ai.services.risk.search_environmental_rules import EnvironmentalRiskAnalyzer
 from nomoros_ai.models.document import DocumentIngestionResponse
 from nomoros_ai.models.request import TitleRiskRequest
 from nomoros_ai.models.title import TitleRiskResponse
+from nomoros_ai.models.search_environmental import EnvironmentalSearchResponse
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -187,6 +190,65 @@ async def analyze_title_risk(request: TitleRiskRequest) -> TitleRiskResponse:
     # Step 4: Build and return response
     return TitleRiskResponse(
         document_type=classification.document_type,
+        extraction=extraction,
+        risk_summary=risk_summary,
+        detailed_risks=detailed_risks
+    )
+
+
+@router.post("/search-risk", response_model=EnvironmentalSearchResponse)
+async def analyze_search_risk(request: TitleRiskRequest) -> EnvironmentalSearchResponse:
+    """
+    Analyze OCR text from an Environmental Search for risks.
+    
+    This endpoint:
+    1. Classifies the document to confirm it's a SEARCH document
+    2. Extracts environmental data (flood, contamination, etc.)
+    3. Applies rule-based risk analysis
+    4. Returns structured risk assessment suitable for a dashboard
+    
+    Currently supports Environmental Search reports (Homecheck, Landmark, etc.)
+    
+    Args:
+        request: TitleRiskRequest containing OCR text
+        
+    Returns:
+        EnvironmentalSearchResponse with extraction and risk analysis
+        
+    Raises:
+        HTTPException: If document is not a SEARCH document
+    """
+    ocr_text = request.ocr_text
+    
+    if not ocr_text or not ocr_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="OCR text is required"
+        )
+    
+    # Step 1: Classify the document using new classifier
+    classification = classify_document(ocr_text)
+    
+    # Accept SEARCH documents, or documents that might be environmental
+    # (TA6 sometimes contains environmental sections)
+    if classification.document_type not in ["SEARCH", "TA6", "UNKNOWN"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Document is not a Search report. Detected type: {classification.document_type}"
+        )
+    
+    # Step 2: Extract environmental data
+    extractor = EnvironmentalSearchExtractor()
+    extraction = extractor.extract(ocr_text)
+    
+    # Step 3: Analyze risks using rule-based engine
+    risk_analyzer = EnvironmentalRiskAnalyzer()
+    risk_summary, detailed_risks = risk_analyzer.analyze(extraction)
+    
+    # Step 4: Build and return response
+    return EnvironmentalSearchResponse(
+        document_type="SEARCH",
+        subtype="Environmental",
         extraction=extraction,
         risk_summary=risk_summary,
         detailed_risks=detailed_risks

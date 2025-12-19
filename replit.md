@@ -47,6 +47,12 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2025-12-19: SEARCH Environmental extraction and risk analysis
+  - EnvironmentalSearchExtraction Pydantic model
+  - Deterministic extraction: flood risk, contamination, radon, ground stability
+  - Rule-based risk detection for environmental issues
+  - POST /documents/search-risk endpoint
+  - Tested with 56-page Landmark/Homecheck environmental report
 - 2025-12-19: Size-aware chunked OCR processing
   - Configurable limits: MAX_SYNC_FILE_SIZE_MB (4MB), MAX_SYNC_PAGES (10)
   - Automatic chunking for large PDFs (Search packs, TA6, Leases)
