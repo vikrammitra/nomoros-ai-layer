@@ -113,6 +113,20 @@ class TitleRisk(BaseModel):
     recommendation: Optional[str] = None
 
 
+class SeverityBreakdown(BaseModel):
+    """
+    Breakdown of risks by severity level.
+    
+    Attributes:
+        high: Count of HIGH severity risks
+        medium: Count of MEDIUM severity risks
+        low: Count of LOW severity risks
+    """
+    high: int = 0
+    medium: int = 0
+    low: int = 0
+
+
 class RiskSummary(BaseModel):
     """
     Summary of all risks identified in a title.
@@ -120,12 +134,14 @@ class RiskSummary(BaseModel):
     Attributes:
         category: Primary risk category
         severity: Highest severity among all risks
+        severity_breakdown: Count of risks by severity level
         risk_count: Total number of risks identified
         risks: List of human-readable risk descriptions
         confidence: Confidence score in the assessment (0.0-1.0)
     """
     category: str = "Title & Ownership"
     severity: RiskSeverity
+    severity_breakdown: SeverityBreakdown = Field(default_factory=SeverityBreakdown)
     risk_count: int
     risks: list[str]
     confidence: float = Field(ge=0.0, le=1.0)

@@ -21,7 +21,8 @@ from nomoros_ai.models.title import (
     TitleClass,
     TitleRisk,
     RiskSeverity,
-    RiskSummary
+    RiskSummary,
+    SeverityBreakdown
 )
 
 
@@ -59,13 +60,15 @@ class TitleRiskAnalyzer:
         risks.extend(self._check_qualified_title(extraction))
         risks.extend(self._check_unknown_title_class(extraction))
         
-        # Determine highest severity
+        # Determine highest severity and breakdown
         highest_severity = self._get_highest_severity(risks)
+        breakdown = self._get_severity_breakdown(risks)
         
         # Create summary
         summary = RiskSummary(
             category="Title & Ownership",
             severity=highest_severity,
+            severity_breakdown=breakdown,
             risk_count=len(risks),
             risks=[r.description for r in risks],
             confidence=self._calculate_confidence(extraction, risks)
@@ -226,6 +229,23 @@ class TitleRiskAnalyzer:
         
         highest = max(risks, key=lambda r: severity_order[r.severity])
         return highest.severity
+    
+    def _get_severity_breakdown(self, risks: list[TitleRisk]) -> SeverityBreakdown:
+        """
+        Count risks by severity level.
+        
+        Returns:
+            SeverityBreakdown with counts for each level
+        """
+        high_count = sum(1 for r in risks if r.severity == RiskSeverity.HIGH)
+        medium_count = sum(1 for r in risks if r.severity == RiskSeverity.MEDIUM)
+        low_count = sum(1 for r in risks if r.severity == RiskSeverity.LOW)
+        
+        return SeverityBreakdown(
+            high=high_count,
+            medium=medium_count,
+            low=low_count
+        )
     
     def _calculate_confidence(
         self,
