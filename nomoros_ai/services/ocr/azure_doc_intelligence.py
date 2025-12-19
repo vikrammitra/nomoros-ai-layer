@@ -310,13 +310,16 @@ class AzureDocumentIntelligenceService:
                             pages_with_content=successful_pages
                         )
         
-        # Step 6: Return whatever content we have (content fallback)
+        # Step 5: Return primary content if available
+        # For single-page documents or when page-split didn't yield more content
         if content_text:
+            # Single page = PRIMARY, multi-page where we tried fallback but
+            # primary had more content = also PRIMARY (no fallback was used)
             return ExtractionResult(
                 success=True,
                 text_content=content_text,
                 page_count=page_count,
-                fallback_strategy=FallbackStrategy.CONTENT_FALLBACK,
+                fallback_strategy=FallbackStrategy.PRIMARY,
                 pages_with_content=pages_with_content
             )
         
