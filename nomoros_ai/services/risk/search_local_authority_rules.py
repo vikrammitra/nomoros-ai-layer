@@ -12,7 +12,7 @@ Risk categories for Local Authority Searches:
 """
 
 from nomoros_ai.models.search_local_authority import LocalAuthoritySearchExtraction
-from nomoros_ai.models.title import RiskSummary
+from nomoros_ai.models.title import RiskSummary, RiskSeverity, SeverityBreakdown
 
 
 class LocalAuthorityRiskAnalyzer:
@@ -143,20 +143,22 @@ class LocalAuthorityRiskAnalyzer:
         # CALCULATE OVERALL SEVERITY
         # ============================================================
         
-        severity_breakdown = {"high": 0, "medium": 0}
-        for risk in risks:
-            if risk["severity"] == "High":
-                severity_breakdown["high"] += 1
-            elif risk["severity"] == "Medium":
-                severity_breakdown["medium"] += 1
+        high_count = sum(1 for r in risks if r["severity"] == "High")
+        medium_count = sum(1 for r in risks if r["severity"] == "Medium")
+        
+        severity_breakdown = SeverityBreakdown(
+            high=high_count,
+            medium=medium_count,
+            low=0
+        )
         
         # Overall severity is the highest individual severity
-        if severity_breakdown["high"] > 0:
-            overall_severity = "High"
-        elif severity_breakdown["medium"] > 0:
-            overall_severity = "Medium"
+        if high_count > 0:
+            overall_severity = RiskSeverity.HIGH
+        elif medium_count > 0:
+            overall_severity = RiskSeverity.MEDIUM
         else:
-            overall_severity = "Low"
+            overall_severity = RiskSeverity.LOW
         
         summary = RiskSummary(
             category=self.CATEGORY,

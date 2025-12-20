@@ -11,15 +11,18 @@ from nomoros_ai.services.ocr.azure_doc_intelligence import (
     AzureDocumentIntelligenceService,
     ExtractionResult
 )
-from nomoros_ai.services.classify import DocumentClassifier, classify_document
+from nomoros_ai.services.classify import DocumentClassifier, classify_document, classify_search_subtype
 from nomoros_ai.services.extract.title import TitleExtractor
 from nomoros_ai.services.extract.search_environmental import EnvironmentalSearchExtractor
+from nomoros_ai.services.extract.search_local_authority import LocalAuthoritySearchExtractor
 from nomoros_ai.services.risk.title_rules import TitleRiskAnalyzer
 from nomoros_ai.services.risk.search_environmental_rules import EnvironmentalRiskAnalyzer
+from nomoros_ai.services.risk.search_local_authority_rules import LocalAuthorityRiskAnalyzer
 from nomoros_ai.models.document import DocumentIngestionResponse
 from nomoros_ai.models.request import TitleRiskRequest
 from nomoros_ai.models.title import TitleRiskResponse
 from nomoros_ai.models.search_environmental import EnvironmentalSearchResponse
+from nomoros_ai.models.search_local_authority_response import LocalAuthoritySearchResponse
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -249,6 +252,77 @@ async def analyze_search_risk(request: TitleRiskRequest) -> EnvironmentalSearchR
     return EnvironmentalSearchResponse(
         document_type="SEARCH",
         subtype="Environmental",
+        extraction=extraction,
+        risk_summary=risk_summary,
+        detailed_risks=detailed_risks
+    )
+
+
+@router.post("/local-authority-risk", response_model=LocalAuthoritySearchResponse)
+async def analyze_local_authority_risk(request: TitleRiskRequest) -> LocalAuthoritySearchResponse:
+    """
+    Analyze OCR text from a Local Authority Search for risks.
+    
+    This endpoint:
+    1. Classifies the document to confirm it's a Local Authority Search
+    2. Uses Azure OpenAI to assist with extraction (planning, enforcement, roads)
+    3. Applies DETERMINISTIC rule-based risk analysis (LLM does NOT assign severity)
+    4. Returns structured risk assessment suitable for a dashboard
+    
+    Note: Azure OpenAI is used for EXTRACTION only. All risk severity decisions
+    are made by deterministic rules for auditability.
+    
+    Args:
+        request: TitleRiskRequest containing OCR text
+        
+    Returns:
+        LocalAuthoritySearchResponse with extraction and risk analysis
+        
+    Raises:
+        HTTPException: If document is not a Local Authority Search
+    """
+    ocr_text = request.ocr_text
+    
+    if not ocr_text or not ocr_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="OCR text is required"
+        )
+    
+    # Step 1: Classify the document
+    classification = classify_document(ocr_text)
+    
+    # Accept SEARCH documents
+    if classification.document_type not in ["SEARCH", "UNKNOWN"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Document is not a Search report. Detected type: {classification.document_type}"
+        )
+    
+    # Step 2: Verify it's a Local Authority Search (not Environmental)
+    subtype = classify_search_subtype(ocr_text)
+    
+    # Allow Local Authority or Unknown subtypes
+    # (Unknown allows processing when subtype can't be determined)
+    if subtype == "Environmental":
+        raise HTTPException(
+            status_code=400,
+            detail="This appears to be an Environmental Search. Use /documents/search-risk endpoint instead."
+        )
+    
+    # Step 3: Extract data using Azure OpenAI-assisted extraction
+    extractor = LocalAuthoritySearchExtractor()
+    extraction = extractor.extract(ocr_text)
+    
+    # Step 4: Analyze risks using DETERMINISTIC rule-based engine
+    # Note: LLM is NOT used for risk severity - all decisions are rule-based
+    risk_analyzer = LocalAuthorityRiskAnalyzer()
+    risk_summary, detailed_risks = risk_analyzer.analyze(extraction)
+    
+    # Step 5: Build and return response
+    return LocalAuthoritySearchResponse(
+        document_type="SEARCH",
+        subtype="Local Authority",
         extraction=extraction,
         risk_summary=risk_summary,
         detailed_risks=detailed_risks

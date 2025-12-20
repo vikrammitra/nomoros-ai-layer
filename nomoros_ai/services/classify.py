@@ -54,6 +54,58 @@ CLASSIFICATION_RULES = {
     ],
 }
 
+# Subtype classification for SEARCH documents
+# Determines which extraction pipeline to use
+SEARCH_SUBTYPE_RULES = {
+    "Local Authority": [
+        "local authority search",
+        "con29",
+        "llc1",
+        "planning permission",
+        "enforcement notice",
+        "road adoption",
+        "compulsory purchase",
+        "building control",
+    ],
+    "Environmental": [
+        "environmental search",
+        "flood risk",
+        "contaminated land",
+        "radon",
+        "ground stability",
+        "homecheck",
+        "landmark",
+        "groundsure",
+    ],
+}
+
+
+def classify_search_subtype(text: str) -> str:
+    """
+    Classify a SEARCH document into its subtype.
+    
+    Args:
+        text: OCR-extracted text from the document
+        
+    Returns:
+        Subtype string: "Local Authority", "Environmental", or "Unknown"
+    """
+    text_lower = text.lower()
+    
+    # Count matches for each subtype
+    subtype_matches: dict[str, int] = {}
+    
+    for subtype, indicators in SEARCH_SUBTYPE_RULES.items():
+        match_count = sum(1 for ind in indicators if ind.lower() in text_lower)
+        if match_count > 0:
+            subtype_matches[subtype] = match_count
+    
+    if not subtype_matches:
+        return "Unknown"
+    
+    # Return the subtype with most matches
+    return max(subtype_matches.keys(), key=lambda k: subtype_matches[k])
+
 
 def classify_document(text: str) -> DocumentClassification:
     """
