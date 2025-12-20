@@ -1,0 +1,127 @@
+You are refining the **output structuring layer** of an existing Python FastAPI backend for a legal conveyancing AI system.
+
+Context:
+
+* Local Authority Search extraction is already working
+* Findings are accurate but presented flatly
+* Deterministic risk rules already exist
+* This task improves **structure, prioritisation, and solicitor readability only**
+
+Objective:
+Improve the **presentation and structuring** of Local Authority Search results so that:
+
+* Findings are grouped logically
+* High-signal issues are clearly distinguished
+* Output is easier for solicitors to scan and prioritise
+* No legal advice or new interpretation is introduced
+
+STRICT SCOPE LIMITS:
+
+* Do NOT change OCR
+* Do NOT change extraction logic
+* Do NOT change Azure OpenAI prompts
+* Do NOT change risk rules or severity logic
+* Do NOT add new findings
+* Modify output formatting / structuring only
+
+---
+
+### Structural improvements to implement
+
+1️⃣ **Group Local Land Charges by type**
+
+Instead of a single flat list, structure Local Land Charges as:
+
+* Section 106 Agreements
+* Tree Preservation Orders
+* Smoke Control Orders
+* Other Charges (if any)
+
+Each entry should remain factual and unchanged.
+
+---
+
+2️⃣ **Improve Planning Register entries**
+
+For each Planning Register entry, present fields explicitly:
+
+* Reference
+* Description
+* Decision status (if known)
+* Note if the entry is historic or context-only
+
+Do NOT infer compliance or relevance.
+
+---
+
+3️⃣ **Clarify Road Adoption findings**
+
+For Road Adoption issues:
+
+* State the factual finding
+* Add a neutral implication label such as:
+
+  * "Private maintenance obligations may apply"
+* Do NOT recommend actions
+
+---
+
+4️⃣ **Clarify CIL output**
+
+For CIL:
+
+* Clearly distinguish between:
+
+  * Presence of a CIL regime
+  * Actual liability (if stated)
+* Use wording such as:
+
+  * "CIL regime identified; liability depends on development history"
+
+---
+
+5️⃣ **Add a lightweight “Key Issues Identified” summary**
+
+At the top of the output, add a short summary block:
+
+Example:
+
+* Section 106 agreement affecting the property
+* Road serving the property is not publicly adopted
+* Tree Preservation Order applies
+* No enforcement notices or planning breaches identified
+
+Rules:
+
+* Summary must only reference extracted findings
+* No severity scoring
+* No recommendations
+* No new interpretation
+
+---
+
+6️⃣ **Optional: Add neutral issue labels (non-severity)**
+
+Where helpful, tag findings with neutral labels such as:
+
+* "Transaction constraint"
+* "Ongoing obligation"
+* "Use / alteration restriction"
+* "Environmental regulation"
+
+Do NOT use High / Medium / Low severity labels here.
+
+---
+
+### Output expectations
+
+The final output should:
+
+* Remain fully deterministic
+* Be auditable and explainable
+* Match solicitor expectations
+* Be suitable for direct UI rendering
+* Improve scanability without adding risk
+
+Deliverable:
+An updated Local Authority Search output structure that presents findings in a clearer, prioritised, and solicitor-friendly format without changing the underlying extraction or risk logic.

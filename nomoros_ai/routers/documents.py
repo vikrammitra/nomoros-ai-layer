@@ -23,6 +23,8 @@ from nomoros_ai.models.request import TitleRiskRequest
 from nomoros_ai.models.title import TitleRiskResponse
 from nomoros_ai.models.search_environmental import EnvironmentalSearchResponse
 from nomoros_ai.models.search_local_authority_response import LocalAuthoritySearchResponse
+from nomoros_ai.models.search_local_authority_structured import StructuredLocalAuthorityResponse
+from nomoros_ai.services.structuring.local_authority_structurer import LocalAuthorityStructurer
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -325,5 +327,75 @@ async def analyze_local_authority_risk(request: TitleRiskRequest) -> LocalAuthor
         subtype="Local Authority",
         extraction=extraction,
         risk_summary=risk_summary,
+        detailed_risks=detailed_risks
+    )
+
+
+@router.post("/local-authority-risk-structured", response_model=StructuredLocalAuthorityResponse)
+async def analyze_local_authority_risk_structured(request: TitleRiskRequest) -> StructuredLocalAuthorityResponse:
+    """
+    Analyze Local Authority Search with solicitor-friendly structured output.
+    
+    This endpoint provides enhanced presentation:
+    - Key Issues Summary at top
+    - Local Land Charges grouped by type (Section 106, TPO, Smoke Control)
+    - Planning Register entries with explicit fields
+    - Road Adoption findings with neutral implications
+    - CIL findings distinguishing regime from liability
+    - Neutral issue labels (Transaction constraint, Ongoing obligation, etc.)
+    
+    The underlying extraction and risk logic is unchanged - this is
+    formatting / structuring only.
+    
+    Args:
+        request: TitleRiskRequest containing OCR text
+        
+    Returns:
+        StructuredLocalAuthorityResponse with grouped, prioritised output
+    """
+    ocr_text = request.ocr_text
+    
+    if not ocr_text or not ocr_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="OCR text is required"
+        )
+    
+    # Step 1: Classify the document
+    classification = classify_document(ocr_text)
+    
+    if classification.document_type not in ["SEARCH", "UNKNOWN"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Document is not a Search report. Detected type: {classification.document_type}"
+        )
+    
+    # Step 2: Verify it's a Local Authority Search
+    subtype = classify_search_subtype(ocr_text)
+    
+    if subtype == "Environmental":
+        raise HTTPException(
+            status_code=400,
+            detail="This appears to be an Environmental Search. Use /documents/search-risk endpoint instead."
+        )
+    
+    # Step 3: Extract data (unchanged)
+    extractor = LocalAuthoritySearchExtractor()
+    extraction = extractor.extract(ocr_text)
+    
+    # Step 4: Analyze risks (unchanged)
+    risk_analyzer = LocalAuthorityRiskAnalyzer()
+    risk_summary, detailed_risks = risk_analyzer.analyze(extraction)
+    
+    # Step 5: Structure the extraction for solicitor readability
+    structurer = LocalAuthorityStructurer()
+    structured_extraction = structurer.structure(extraction)
+    
+    # Step 6: Build and return structured response
+    return StructuredLocalAuthorityResponse(
+        document_type="SEARCH",
+        subtype="Local Authority",
+        structured_extraction=structured_extraction,
+        risk_summary=risk_summary.model_dump(),
         detailed_risks=detailed_risks
     )
