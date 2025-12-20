@@ -52,19 +52,25 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
-- 2025-12-20: LOCAL AUTHORITY Search extraction and risk analysis
-  - LocalAuthoritySearchExtraction Pydantic model with Local Land Charges
+- 2025-12-20: LOCAL AUTHORITY Search extraction and risk analysis (v2 - stable)
+  - LocalAuthoritySearchExtraction Pydantic model with comprehensive fields:
+    - local_land_charges (Section 106, smoke control, TPO, financial charges)
+    - planning_register_entries (applications with refs, dates, outcomes)
+    - enforcement_notices, planning_breaches (HIGH risk)
+    - road_adoption_issues, cil_liability, further_action_details (MEDIUM risk)
+    - compulsory_purchase_orders (HIGH risk)
   - Text chunking service for LLM-safe segments (3500 char chunks)
-  - Azure OpenAI client for assistive extraction (extraction only, not risk decisions)
-  - Regex-based fallback extraction when Azure OpenAI unavailable
-  - Local Land Charges extraction: Section 106, smoke control, tree preservation orders
+  - Azure OpenAI client (gpt-5-nano-2) for assistive extraction:
+    - 4000 max_completion_tokens (allows 2000 reasoning + 2000 content)
+    - 90s timeout for large documents
+    - Extraction only - all risk severity decisions remain deterministic
   - Deterministic risk rules:
     - HIGH: Enforcement notices, planning breaches, CPO
-    - MEDIUM: Section 106 agreements, road adoption issues, further enquiries
+    - MEDIUM: Section 106, road adoption, CIL liability, further enquiries
     - LOW: Smoke control orders, tree preservation orders
   - POST /documents/local-authority-risk endpoint
-  - Search subtype classification (Local Authority vs Environmental)
   - Tested with real 17-page Local Authority Search (5 Osprey Close, Sutton)
+    - Successfully extracts: LLC, 7 planning entries, road adoption, CIL references
 - 2025-12-19: SEARCH Environmental extraction and risk analysis
   - EnvironmentalSearchExtraction Pydantic model
   - Deterministic extraction: flood risk, contamination, radon, ground stability
