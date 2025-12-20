@@ -14,12 +14,18 @@ class LocalAuthoritySearchExtraction(BaseModel):
     Structured extraction from Local Authority Search documents.
     
     Covers key areas of conveyancing concern:
+    - Local land charges (Section 106, smoke control, tree preservation)
     - Planning permissions (approved, pending, refused)
     - Enforcement notices (unauthorized development)
     - Planning breaches (non-compliance with conditions)
     - Road adoption (whether roads are publicly maintained)
     - Compulsory purchase orders (government acquisition powers)
     """
+    
+    local_land_charges: list[str] = Field(
+        default_factory=list,
+        description="Local Land Charge register entries (Section 106 agreements, smoke control orders, tree preservation orders)"
+    )
     
     planning_permissions: list[str] = Field(
         default_factory=list,
@@ -63,6 +69,7 @@ class LocalAuthorityChunkExtraction(BaseModel):
     Used for aggregating findings across multiple chunks.
     """
     
+    local_land_charges: list[str] = Field(default_factory=list)
     planning_permissions: list[str] = Field(default_factory=list)
     enforcement_notices: list[str] = Field(default_factory=list)
     planning_breaches: list[str] = Field(default_factory=list)

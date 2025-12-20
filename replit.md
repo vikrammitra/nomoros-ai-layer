@@ -53,13 +53,18 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 
 ## Recent Changes
 - 2025-12-20: LOCAL AUTHORITY Search extraction and risk analysis
-  - LocalAuthoritySearchExtraction Pydantic model
-  - Text chunking service for LLM-safe segments
+  - LocalAuthoritySearchExtraction Pydantic model with Local Land Charges
+  - Text chunking service for LLM-safe segments (3500 char chunks)
   - Azure OpenAI client for assistive extraction (extraction only, not risk decisions)
   - Regex-based fallback extraction when Azure OpenAI unavailable
-  - Deterministic risk rules: enforcement notices, planning breaches, CPO = HIGH; road adoption, further action = MEDIUM
+  - Local Land Charges extraction: Section 106, smoke control, tree preservation orders
+  - Deterministic risk rules:
+    - HIGH: Enforcement notices, planning breaches, CPO
+    - MEDIUM: Section 106 agreements, road adoption issues, further enquiries
+    - LOW: Smoke control orders, tree preservation orders
   - POST /documents/local-authority-risk endpoint
   - Search subtype classification (Local Authority vs Environmental)
+  - Tested with real 17-page Local Authority Search (5 Osprey Close, Sutton)
 - 2025-12-19: SEARCH Environmental extraction and risk analysis
   - EnvironmentalSearchExtraction Pydantic model
   - Deterministic extraction: flood risk, contamination, radon, ground stability

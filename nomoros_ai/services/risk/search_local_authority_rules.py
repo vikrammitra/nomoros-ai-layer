@@ -26,8 +26,13 @@ class LocalAuthorityRiskAnalyzer:
     - Compulsory purchase order (property may be acquired)
     
     🟠 MEDIUM:
+    - Section 106 agreement (planning obligations/restrictions)
     - Unadopted road (ongoing maintenance liability)
     - Further action required (outstanding enquiries)
+    
+    🟢 LOW (informational):
+    - Smoke control order (common, rarely impacts transactions)
+    - Tree preservation order (affects tree removal rights)
     """
     
     CATEGORY = "Searches – Local Authority"
@@ -107,6 +112,69 @@ class LocalAuthorityRiskAnalyzer:
         # MEDIUM SEVERITY RISKS
         # ============================================================
         
+        # Section 106 agreements - 🟠 MEDIUM
+        # Legal basis: S106 agreements impose planning obligations that run with the land
+        # May require financial contributions or restrict future development
+        if extraction.local_land_charges:
+            for charge in extraction.local_land_charges:
+                charge_lower = charge.lower()
+                
+                # Section 106 agreements are MEDIUM - impose ongoing obligations
+                if "section 106" in charge_lower or "s106" in charge_lower or "planning agreement" in charge_lower:
+                    risks.append({
+                        "category": self.CATEGORY,
+                        "severity": "Medium",
+                        "issue": "Section 106 agreement",
+                        "description": charge,
+                        "legal_rationale": "Section 106 agreements impose planning obligations that run with the land"
+                    })
+                    risk_descriptions.append(
+                        f"Section 106 agreement: {charge[:100]}..."
+                        if len(charge) > 100 else f"Section 106 agreement: {charge}"
+                    )
+                
+                # Tree preservation orders are LOW but informational
+                elif "tree preservation" in charge_lower or "tpo" in charge_lower:
+                    risks.append({
+                        "category": self.CATEGORY,
+                        "severity": "Low",
+                        "issue": "Tree preservation order",
+                        "description": charge,
+                        "legal_rationale": "TPO restricts removal or works to protected trees"
+                    })
+                    risk_descriptions.append(
+                        f"Tree preservation order: {charge[:100]}..."
+                        if len(charge) > 100 else f"Tree preservation order: {charge}"
+                    )
+                
+                # Smoke control orders are LOW - informational
+                elif "smoke control" in charge_lower or "clean air" in charge_lower:
+                    risks.append({
+                        "category": self.CATEGORY,
+                        "severity": "Low",
+                        "issue": "Smoke control order",
+                        "description": charge,
+                        "legal_rationale": "Smoke control order restricts burning of certain fuels"
+                    })
+                    risk_descriptions.append(
+                        f"Smoke control order: {charge[:80]}..."
+                        if len(charge) > 80 else f"Smoke control order: {charge}"
+                    )
+                
+                # Financial charges are MEDIUM - may affect property
+                elif "financial" in charge_lower or "charge" in charge_lower:
+                    risks.append({
+                        "category": self.CATEGORY,
+                        "severity": "Medium",
+                        "issue": "Financial charge",
+                        "description": charge,
+                        "legal_rationale": "Financial charges registered against the property"
+                    })
+                    risk_descriptions.append(
+                        f"Financial charge: {charge[:100]}..."
+                        if len(charge) > 100 else f"Financial charge: {charge}"
+                    )
+        
         # Road adoption issues - 🟠 MEDIUM
         # Legal basis: Unadopted roads mean the property owner may be liable
         # for maintenance costs and the road may not be publicly maintained
@@ -145,11 +213,12 @@ class LocalAuthorityRiskAnalyzer:
         
         high_count = sum(1 for r in risks if r["severity"] == "High")
         medium_count = sum(1 for r in risks if r["severity"] == "Medium")
+        low_count = sum(1 for r in risks if r["severity"] == "Low")
         
         severity_breakdown = SeverityBreakdown(
             high=high_count,
             medium=medium_count,
-            low=0
+            low=low_count
         )
         
         # Overall severity is the highest individual severity

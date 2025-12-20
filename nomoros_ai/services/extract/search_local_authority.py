@@ -50,26 +50,31 @@ STRICT RULES:
     # User prompt template for extraction
     USER_PROMPT = """From the following Local Authority Search text, extract:
 
-1. planning_permissions - Any planning permissions (approved, pending, refused, withdrawn)
+1. local_land_charges - Local Land Charge register entries
+   Include: Section 106 agreements, smoke control orders, tree preservation orders,
+   financial charges, listed building designations, conservation area entries
+   
+2. planning_permissions - Any planning permissions (approved, pending, refused, withdrawn)
    Include: application references, dates, descriptions
    
-2. enforcement_notices - Any enforcement notices or stop notices
+3. enforcement_notices - Any enforcement notices or stop notices
    Include: dates, descriptions, what they relate to
    
-3. planning_breaches - Any breaches of planning conditions
+4. planning_breaches - Any breaches of planning conditions
    Include: what conditions were breached
    
-4. road_adoption_issues - Any road adoption status issues
+5. road_adoption_issues - Any road adoption status issues
    Look for: "not adopted", "private road", "unadopted", "adoption scheme"
    
-5. compulsory_purchase_orders - Any CPO affecting the property
+6. compulsory_purchase_orders - Any CPO affecting the property
    Include: dates, acquiring authority, purpose
    
-6. further_action_required - Boolean, true if the document recommends further enquiries
+7. further_action_required - Boolean, true if the document recommends further enquiries
 
 Return valid JSON with these exact keys. Use empty arrays [] if nothing found.
 Example format:
 {
+  "local_land_charges": ["Section 106 agreement dated 21/09/1998", "Smoke control order"],
   "planning_permissions": ["Permission granted 2020/12345 for rear extension"],
   "enforcement_notices": [],
   "planning_breaches": [],
@@ -152,6 +157,7 @@ Example format:
         
         # Parse into Pydantic model with validation
         return LocalAuthorityChunkExtraction(
+            local_land_charges=result.get("local_land_charges", []),
             planning_permissions=result.get("planning_permissions", []),
             enforcement_notices=result.get("enforcement_notices", []),
             planning_breaches=result.get("planning_breaches", []),
@@ -169,6 +175,7 @@ Example format:
         Aggregate and deduplicate findings from multiple chunks.
         """
         # Use sets for deduplication
+        local_land_charges: set[str] = set()
         planning_permissions: set[str] = set()
         enforcement_notices: set[str] = set()
         planning_breaches: set[str] = set()
@@ -177,6 +184,7 @@ Example format:
         further_action_required: bool | None = None
         
         for ext in extractions:
+            local_land_charges.update(ext.local_land_charges)
             planning_permissions.update(ext.planning_permissions)
             enforcement_notices.update(ext.enforcement_notices)
             planning_breaches.update(ext.planning_breaches)
@@ -189,7 +197,16 @@ Example format:
             elif ext.further_action_required is False and further_action_required is None:
                 further_action_required = False
         
+        # Post-process: Check source_sections for Section 106 entries that might
+        # have been miscategorized as section headings
+        for section in source_sections:
+            section_lower = section.lower()
+            if "section 106" in section_lower or "planning agreement" in section_lower:
+                if section not in local_land_charges:
+                    local_land_charges.add(section)
+        
         return LocalAuthoritySearchExtraction(
+            local_land_charges=sorted(list(local_land_charges)),
             planning_permissions=sorted(list(planning_permissions)),
             enforcement_notices=sorted(list(enforcement_notices)),
             planning_breaches=sorted(list(planning_breaches)),
@@ -209,6 +226,7 @@ Example format:
         import re
         text = ocr_text.lower()
         
+        local_land_charges = []
         planning_permissions = []
         enforcement_notices = []
         planning_breaches = []
@@ -216,6 +234,22 @@ Example format:
         compulsory_purchase_orders = []
         further_action_required = None
         source_sections = ["Fallback Extraction"]
+        
+        # Extract Local Land Charges
+        llc_patterns = [
+            r"section 106[^\n]*",
+            r"s106[^\n]*agreement[^\n]*",
+            r"planning agreement[^\n]*",
+            r"smoke control[^\n]*order[^\n]*",
+            r"clean air act[^\n]*",
+            r"tree preservation[^\n]*order[^\n]*",
+            r"tpo[^\n]*",
+        ]
+        for pattern in llc_patterns:
+            matches = re.findall(pattern, text)
+            for match in matches:
+                if match.strip() and len(match) > 15:
+                    local_land_charges.append(match.strip().capitalize())
         
         # Extract planning permissions
         # Look for patterns like "planning permission granted/refused YYYY/NNNNN"
@@ -307,7 +341,11 @@ Example format:
                 unique_roads.append(issue)
         road_adoption_issues = unique_roads
         
+        # Deduplicate local land charges
+        local_land_charges = list(set(local_land_charges))
+        
         return LocalAuthoritySearchExtraction(
+            local_land_charges=local_land_charges,
             planning_permissions=planning_permissions,
             enforcement_notices=enforcement_notices,
             planning_breaches=planning_breaches,
