@@ -36,14 +36,15 @@ class LocalAuthoritySearchExtractor:
     """
     
     # System prompt: Define LLM role and constraints
-    SYSTEM_PROMPT = """You are a legal document analysis assistant specializing in UK conveyancing.
-Your task is to extract factual information from Local Authority Search documents.
+    # Note: Must mention "JSON" explicitly for Azure OpenAI json_object mode
+    SYSTEM_PROMPT = """You are a legal document analysis assistant that outputs JSON.
+You specialize in UK conveyancing and extract factual information from Local Authority Search documents.
 
 STRICT RULES:
 - Extract facts ONLY - do not assess severity or risk
 - Do not make legal conclusions
 - If information is unclear, return empty arrays
-- Always return valid JSON
+- Always respond with valid JSON only
 - Prefer false negatives over false positives"""
 
     # User prompt template for extraction

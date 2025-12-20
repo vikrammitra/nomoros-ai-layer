@@ -113,10 +113,11 @@ class AzureOpenAIClient:
         ]
         
         # Build request payload
+        # Note: Newer models (gpt-5, o1, etc.) use max_completion_tokens instead of max_tokens
+        # Note: Some models (o1, gpt-5-nano) don't support temperature parameter
         payload = {
             "messages": messages,
-            "temperature": self.TEMPERATURE,
-            "max_tokens": self.MAX_TOKENS,
+            "max_completion_tokens": self.MAX_TOKENS,
             "response_format": {"type": "json_object"}
         }
         
@@ -140,7 +141,12 @@ class AzureOpenAIClient:
                 
             except httpx.HTTPStatusError as e:
                 last_error = e
-                logger.warning(f"Azure OpenAI HTTP error (attempt {attempt + 1}): {e}")
+                # Log the full error response for debugging
+                try:
+                    error_body = e.response.text
+                    logger.warning(f"Azure OpenAI HTTP error (attempt {attempt + 1}): {e}. Response: {error_body[:500]}")
+                except:
+                    logger.warning(f"Azure OpenAI HTTP error (attempt {attempt + 1}): {e}")
                 if e.response.status_code == 429:
                     # Rate limited - wait before retry
                     import time
