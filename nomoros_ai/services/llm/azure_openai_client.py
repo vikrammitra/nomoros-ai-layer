@@ -39,8 +39,11 @@ class AzureOpenAIClient:
     
     # Conservative settings for legal document processing
     TEMPERATURE = 0  # Deterministic output
-    MAX_TOKENS = 2000
-    TIMEOUT_SECONDS = 60
+    # Note: gpt-5-nano-2 is a reasoning model that uses internal reasoning tokens
+    # before generating the response. We need enough tokens for both reasoning
+    # and the actual JSON output. 4000 allows ~2000 reasoning + 2000 content.
+    MAX_TOKENS = 4000
+    TIMEOUT_SECONDS = 90
     MAX_RETRIES = 2
     
     def __init__(self, config: AzureOpenAIConfig | None = None):
@@ -134,11 +137,23 @@ class AzureOpenAIClient:
                 response.raise_for_status()
                 
                 result = response.json()
-                content = result["choices"][0]["message"]["content"]
+                
+                # Check if we have choices
+                if not result.get("choices"):
+                    logger.warning(f"No choices in Azure OpenAI response: {result}")
+                    return {}
+                
+                message = result["choices"][0].get("message", {})
+                content = message.get("content", "")
+                
+                # Check finish reason
+                finish_reason = result["choices"][0].get("finish_reason", "unknown")
+                if finish_reason != "stop":
+                    logger.warning(f"Azure OpenAI finish_reason: {finish_reason}")
                 
                 # Handle empty or whitespace-only responses
                 if not content or not content.strip():
-                    logger.warning("Empty response from Azure OpenAI")
+                    logger.warning(f"Empty response from Azure OpenAI. Finish reason: {finish_reason}. Full response: {result}")
                     return {}
                 
                 # Parse and return JSON
