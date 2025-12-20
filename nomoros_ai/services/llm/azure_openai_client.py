@@ -136,6 +136,11 @@ class AzureOpenAIClient:
                 result = response.json()
                 content = result["choices"][0]["message"]["content"]
                 
+                # Handle empty or whitespace-only responses
+                if not content or not content.strip():
+                    logger.warning("Empty response from Azure OpenAI")
+                    return {}
+                
                 # Parse and return JSON
                 return json.loads(content)
                 

@@ -27,10 +27,11 @@ class TextChunker:
     3. Ensure each chunk is within token-safe limits
     """
     
-    # Target chunk size in characters (approx 300-400 tokens)
-    DEFAULT_CHUNK_SIZE = 1200
-    MAX_CHUNK_SIZE = 1500
-    MIN_CHUNK_SIZE = 200
+    # Target chunk size in characters (approx 800-1000 tokens)
+    # Larger chunks = fewer API calls, faster processing
+    DEFAULT_CHUNK_SIZE = 3500
+    MAX_CHUNK_SIZE = 4000
+    MIN_CHUNK_SIZE = 500
     
     # Common section heading patterns in Local Authority Searches
     SECTION_PATTERNS = [
