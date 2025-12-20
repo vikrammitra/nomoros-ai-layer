@@ -10,12 +10,13 @@ All severity and risk decisions remain deterministic in the rules layer.
 """
 
 import json
-import os
 import logging
 from typing import Any
 
 import httpx
 from pydantic import BaseModel
+
+from nomoros_ai.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -54,11 +55,11 @@ class AzureOpenAIClient:
         self._client = httpx.Client(timeout=self.TIMEOUT_SECONDS)
     
     def _load_from_env(self) -> AzureOpenAIConfig:
-        """Load configuration from environment variables."""
-        endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
-        api_key = os.environ.get("AZURE_OPENAI_API_KEY", "")
-        deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
-        api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+        """Load configuration from centralized settings."""
+        endpoint = settings.azure_openai_endpoint or ""
+        api_key = settings.openai_key or ""  # Uses property that checks both env var names
+        deployment = settings.azure_openai_deployment or "gpt-4o"
+        api_version = settings.azure_openai_api_version
         
         return AzureOpenAIConfig(
             endpoint=endpoint,

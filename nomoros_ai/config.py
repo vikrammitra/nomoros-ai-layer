@@ -22,10 +22,22 @@ class Settings(BaseSettings):
     azure_document_intelligence_endpoint: Optional[str] = None
     azure_document_intelligence_key: Optional[str] = None
     
+    # Azure OpenAI configuration (for Local Authority extraction)
+    azure_openai_endpoint: Optional[str] = None
+    azure_openai_key: Optional[str] = None  # Accepts AZURE_OPENAI_KEY
+    azure_openai_api_key: Optional[str] = None  # Also accepts AZURE_OPENAI_API_KEY
+    azure_openai_deployment: Optional[str] = None
+    azure_openai_api_version: str = "2024-12-01-preview"
+    
     # Application settings
     app_name: str = "Nomoros AI API"
     app_version: str = "0.1.0"
     debug: bool = False
+    
+    @property
+    def openai_key(self) -> Optional[str]:
+        """Get OpenAI key from either env var name."""
+        return self.azure_openai_api_key or self.azure_openai_key
     
     class Config:
         env_file = ".env"
