@@ -1,0 +1,184 @@
+You are extending an existing **Python FastAPI backend** for a legal conveyancing AI system.
+
+Context:
+
+* Azure Document Intelligence OCR is already implemented with chunking and fallbacks
+* Deterministic document classification exists
+* SEARCH Environmental extraction v1 exists
+* This task adds **Local Authority Search (Planning & Enforcement) analysis**
+* Azure OpenAI is available and configured via environment variables
+
+Objective:
+Implement a **Local Authority Search module** that:
+
+1. Parses OCR output from Local Authority Search PDFs
+2. Chunks OCR text into LLM-safe segments
+3. Uses **Azure OpenAI** to analyse planning and enforcement risks
+4. Produces structured, solicitor-readable risk outputs
+5. Does NOT override deterministic severity rules
+
+Scope limits (must follow strictly):
+
+* Do NOT modify OCR ingestion or chunking infrastructure
+* Do NOT modify Title Register or Environmental Search logic
+* Do NOT introduce chat endpoints
+* Do NOT use Azure OpenAI for OCR
+* Azure OpenAI may assist with analysis, not final severity decisions
+
+New components to add:
+
+---
+
+### 1️⃣ Pydantic extraction model
+
+Create file: `models/search_local_authority.py`
+
+Model: `LocalAuthoritySearchExtraction`
+
+Fields:
+
+* planning_permissions: list[str]
+* enforcement_notices: list[str]
+* planning_breaches: list[str]
+* road_adoption_issues: list[str]
+* compulsory_purchase_orders: list[str]
+* further_action_required: bool | None
+* source_sections: list[str]
+
+---
+
+### 2️⃣ OCR text chunker for LLM analysis
+
+Create file: `services/chunking/text_chunker.py`
+
+Responsibilities:
+
+* Accept full OCR text
+* Chunk text by:
+
+  * section headings if present
+  * otherwise fixed-size token-safe chunks (e.g. 1,000–1,500 chars)
+* Preserve section titles in each chunk
+* Return ordered list of chunks
+
+---
+
+### 3️⃣ Azure OpenAI analysis service (assistive only)
+
+Create file: `services/llm/azure_openai_client.py`
+
+Responsibilities:
+
+* Read Azure OpenAI credentials from environment variables
+* Accept a text chunk + task-specific prompt
+* Return structured JSON only
+* Handle retries and timeouts defensively
+
+Azure OpenAI usage rules:
+
+* Use GPT-4 or GPT-4o deployment
+* Temperature = 0
+* No free-form text output
+* No legal conclusions
+* No severity assignment
+
+---
+
+### 4️⃣ Local Authority Search analysis service
+
+Create file: `services/extract/search_local_authority.py`
+
+Responsibilities:
+
+* Accept OCR text for a SEARCH document
+* Use text chunker to split into chunks
+* For each chunk, call Azure OpenAI with a **strict extraction prompt**
+* Populate `LocalAuthoritySearchExtraction`
+* Deduplicate findings across chunks
+* Track source sections/pages where possible
+
+Example Azure OpenAI task prompt (use this structure):
+
+SYSTEM:
+"You are a legal document analysis assistant. Extract factual planning and enforcement findings only. Do not assess severity."
+
+USER:
+"From the following Local Authority Search text, extract:
+
+* planning permissions
+* enforcement notices
+* planning breaches
+* road adoption issues
+* compulsory purchase orders
+* any statements indicating further action required
+
+Return valid JSON only. If none found, return empty arrays."
+
+---
+
+### 5️⃣ Deterministic risk rules (NO LLM decisions)
+
+Create file: `services/risk/search_local_authority_rules.py`
+
+Rules to implement:
+
+* Enforcement notice present → 🔴 High risk
+* Planning breach present → 🔴 High risk
+* Compulsory purchase order → 🔴 High risk
+* Unadopted road / road scheme → 🟠 Medium risk
+* Further action required → 🟠 Medium risk
+
+Each risk must include:
+
+* category = "Searches – Local Authority"
+* severity ("High" / "Medium")
+* clear solicitor-readable description
+
+---
+
+### 6️⃣ Orchestration hook
+
+When classifier returns:
+
+* document_type = "SEARCH"
+* subtype = "Local Authority"
+
+Then:
+
+* Run Local Authority extraction
+* Apply deterministic risk rules
+* Return structured output consistent with existing risk summary schema
+
+Example response shape:
+
+```json
+{
+  "document_type": "SEARCH",
+  "subtype": "Local Authority",
+  "extraction": {
+    "enforcement_notices": ["Enforcement Notice dated 12/03/2019 re rear extension"],
+    "road_adoption_issues": ["Road serving property not adopted"],
+    "further_action_required": true
+  },
+  "risk_summary": {
+    "category": "Searches – Local Authority",
+    "severity": "High",
+    "risk_count": 2,
+    "risks": [
+      "Enforcement notice identified relating to unauthorised development",
+      "Road serving the property is not adopted by the local authority"
+    ]
+  }
+}
+```
+
+Implementation guidance:
+
+* Prefer false negatives over false positives
+* Azure OpenAI assists extraction only
+* All severity logic must be deterministic
+* Add comments explaining conveyancing relevance
+* Assume output may be audited by solicitors
+
+Deliverable:
+A working Local Authority Search analysis pipeline that uses Azure Document Intelligence for OCR, Azure OpenAI for assistive extraction on chunked text, and deterministic rules for risk classification.
