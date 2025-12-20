@@ -103,7 +103,7 @@ Example format:
         
         # Check if Azure OpenAI is configured
         if not self.openai_client.is_configured:
-            logger.warning("Azure OpenAI not configured - falling back to basic extraction")
+            logger.warning("Azure OpenAI not configured - falling back to regex extraction")
             return self._fallback_extraction(ocr_text)
         
         # Chunk the text
@@ -116,6 +116,7 @@ Example format:
         # Extract from each chunk
         chunk_extractions: list[LocalAuthorityChunkExtraction] = []
         source_sections: set[str] = set()
+        failed_chunks = 0
         
         for chunk in chunks:
             try:
@@ -127,7 +128,13 @@ Example format:
                     
             except Exception as e:
                 logger.error(f"Error extracting from chunk {chunk.chunk_index}: {e}")
+                failed_chunks += 1
                 continue
+        
+        # If all chunks failed, fall back to regex extraction
+        if failed_chunks == len(chunks):
+            logger.warning("All Azure OpenAI extractions failed - falling back to regex extraction")
+            return self._fallback_extraction(ocr_text)
         
         # Aggregate and deduplicate findings
         return self._aggregate_extractions(chunk_extractions, list(source_sections))
@@ -193,28 +200,118 @@ Example format:
     
     def _fallback_extraction(self, ocr_text: str) -> LocalAuthoritySearchExtraction:
         """
-        Basic regex-based extraction when Azure OpenAI is not available.
+        Regex-based extraction when Azure OpenAI is not available.
         
-        This is a minimal fallback - Azure OpenAI provides much better results.
+        This provides basic extraction capability as a fallback.
+        Azure OpenAI provides more comprehensive results when configured.
         """
         import re
         text = ocr_text.lower()
         
-        extraction = LocalAuthoritySearchExtraction()
+        planning_permissions = []
+        enforcement_notices = []
+        planning_breaches = []
+        road_adoption_issues = []
+        compulsory_purchase_orders = []
+        further_action_required = None
+        source_sections = ["Fallback Extraction"]
         
-        # Basic pattern matching for key issues
-        if any(phrase in text for phrase in ["enforcement notice", "stop notice", "breach of condition"]):
-            extraction.enforcement_notices.append("Enforcement notice detected - requires review")
+        # Extract planning permissions
+        # Look for patterns like "planning permission granted/refused YYYY/NNNNN"
+        pp_patterns = [
+            r"planning (?:permission|consent) (?:granted|approved|refused|pending)[^\n]*",
+            r"(?:application|ref(?:erence)?)[:\s]*\d{4}/\d+[^\n]*",
+        ]
+        for pattern in pp_patterns:
+            matches = re.findall(pattern, text)
+            for match in matches:
+                if match.strip() and len(match) > 10:
+                    planning_permissions.append(match.strip().capitalize())
         
-        if any(phrase in text for phrase in ["not adopted", "unadopted road", "private road"]):
-            extraction.road_adoption_issues.append("Road adoption issue detected - requires review")
+        # Extract enforcement notices
+        # Must contain more than just "Enforcement Notice" heading
+        enforcement_patterns = [
+            r"enforcement notice dated[^\n]*",
+            r"enforcement notice[^\n]{10,}",  # Must have substantial content after
+            r"stop notice dated[^\n]*",
+            r"breach of (?:planning )?condition[^\n]*",
+        ]
+        for pattern in enforcement_patterns:
+            matches = re.findall(pattern, text)
+            for match in matches:
+                match = match.strip()
+                # Skip section headings
+                if match and len(match) > 20 and match.lower() not in ["enforcement notices", "enforcement notice"]:
+                    enforcement_notices.append(match.capitalize())
         
-        if "compulsory purchase" in text:
-            extraction.compulsory_purchase_orders.append("CPO reference detected - requires review")
+        # Check for planning breaches
+        if "breach" in text and ("condition" in text or "planning" in text):
+            breach_match = re.search(r"breach[^\n]{0,100}", text)
+            if breach_match:
+                planning_breaches.append(breach_match.group().strip().capitalize())
         
-        if any(phrase in text for phrase in ["further enquir", "recommend", "should be raised"]):
-            extraction.further_action_required = True
+        # Extract road adoption issues
+        road_patterns = [
+            r"(?:road|highway)[^\.]*(?:not adopted|unadopted|private)[^\.]*",
+            r"private road[^\n]*",
+            r"not adopted[^\n]*",
+        ]
+        for pattern in road_patterns:
+            matches = re.findall(pattern, text)
+            for match in matches:
+                if match.strip() and len(match) > 10:
+                    road_adoption_issues.append(match.strip().capitalize())
         
-        extraction.source_sections.append("Fallback Extraction")
+        # Check for compulsory purchase orders
+        # Look for actual CPO references, not just section headings
+        cpo_patterns = [
+            r"compulsory purchase order[^\n]{10,}",  # Must have content after
+            r"cpo[^\n]*affecting[^\n]*",
+        ]
+        for pattern in cpo_patterns:
+            matches = re.findall(pattern, text)
+            for match in matches:
+                match = match.strip()
+                # Skip headings and "None" statements
+                if match and len(match) > 25:
+                    if "none" not in match.lower() and match.lower() not in ["compulsory purchase orders", "compulsory purchase order"]:
+                        compulsory_purchase_orders.append(match.capitalize())
         
-        return extraction
+        # Check for further action required
+        further_action_patterns = [
+            "further enquir",
+            "recommend",
+            "should be raised",
+            "additional information required",
+            "further investigation",
+        ]
+        if any(phrase in text for phrase in further_action_patterns):
+            further_action_required = True
+        
+        # Deduplicate and clean up
+        planning_permissions = list(set(planning_permissions))
+        enforcement_notices = list(set(enforcement_notices))
+        planning_breaches = list(set(planning_breaches))
+        
+        # Deduplicate road issues more aggressively - keep longest unique
+        unique_roads = []
+        for issue in sorted(road_adoption_issues, key=len, reverse=True):
+            # Only add if not a substring of existing
+            is_duplicate = False
+            for existing in unique_roads:
+                if issue.lower() in existing.lower() or existing.lower() in issue.lower():
+                    is_duplicate = True
+                    break
+            if not is_duplicate and len(issue) > 15:
+                unique_roads.append(issue)
+        road_adoption_issues = unique_roads
+        
+        return LocalAuthoritySearchExtraction(
+            planning_permissions=planning_permissions,
+            enforcement_notices=enforcement_notices,
+            planning_breaches=planning_breaches,
+            road_adoption_issues=road_adoption_issues,
+            compulsory_purchase_orders=compulsory_purchase_orders,
+            further_action_required=further_action_required,
+            source_sections=source_sections
+        )

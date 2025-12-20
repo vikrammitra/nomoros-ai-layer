@@ -34,11 +34,16 @@ nomoros_ai/
 - `GET /health` - Health check (shows if Azure is configured)
 - `POST /documents/ingest` - Upload PDF for OCR extraction
 - `POST /documents/title-risk` - Analyze OCR text for title risks
+- `POST /documents/search-risk` - Analyze Environmental Search for risks
+- `POST /documents/local-authority-risk` - Analyze Local Authority Search for risks (uses Azure OpenAI)
 
 ## Required Environment Variables
 
 - `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` - Azure Document Intelligence endpoint URL
 - `AZURE_DOCUMENT_INTELLIGENCE_KEY` - Azure API key
+- `AZURE_OPENAI_ENDPOINT` - Azure OpenAI endpoint URL (optional, for Local Authority extraction)
+- `AZURE_OPENAI_API_KEY` - Azure OpenAI API key (optional)
+- `AZURE_OPENAI_DEPLOYMENT` - Azure OpenAI deployment name (e.g., gpt-4o)
 
 ## Running the Application
 
@@ -47,6 +52,14 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2025-12-20: LOCAL AUTHORITY Search extraction and risk analysis
+  - LocalAuthoritySearchExtraction Pydantic model
+  - Text chunking service for LLM-safe segments
+  - Azure OpenAI client for assistive extraction (extraction only, not risk decisions)
+  - Regex-based fallback extraction when Azure OpenAI unavailable
+  - Deterministic risk rules: enforcement notices, planning breaches, CPO = HIGH; road adoption, further action = MEDIUM
+  - POST /documents/local-authority-risk endpoint
+  - Search subtype classification (Local Authority vs Environmental)
 - 2025-12-19: SEARCH Environmental extraction and risk analysis
   - EnvironmentalSearchExtraction Pydantic model
   - Deterministic extraction: flood risk, contamination, radon, ground stability
