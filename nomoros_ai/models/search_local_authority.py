@@ -15,26 +15,27 @@ class LocalAuthoritySearchExtraction(BaseModel):
     
     Covers key areas of conveyancing concern:
     - Local land charges (Section 106, smoke control, tree preservation)
-    - Planning permissions (approved, pending, refused)
+    - Planning register entries (approved, pending, refused, withdrawn)
     - Enforcement notices (unauthorized development)
     - Planning breaches (non-compliance with conditions)
     - Road adoption (whether roads are publicly maintained)
     - Compulsory purchase orders (government acquisition powers)
+    - Community Infrastructure Levy (CIL) liability
     """
     
     local_land_charges: list[str] = Field(
         default_factory=list,
-        description="Local Land Charge register entries (Section 106 agreements, smoke control orders, tree preservation orders)"
+        description="Local Land Charge register entries (Section 106 agreements, smoke control orders, tree preservation orders, financial charges)"
     )
     
-    planning_permissions: list[str] = Field(
+    planning_register_entries: list[str] = Field(
         default_factory=list,
-        description="Planning permissions affecting the property (approved, pending, refused)"
+        description="Planning register entries (applications granted, refused, pending, withdrawn with refs and dates)"
     )
     
     enforcement_notices: list[str] = Field(
         default_factory=list,
-        description="Enforcement notices issued against the property"
+        description="Enforcement notices or stop notices issued against the property"
     )
     
     planning_breaches: list[str] = Field(
@@ -44,7 +45,7 @@ class LocalAuthoritySearchExtraction(BaseModel):
     
     road_adoption_issues: list[str] = Field(
         default_factory=list,
-        description="Road adoption status issues (unadopted roads, adoption schemes)"
+        description="Road adoption status issues (unadopted roads, private roads, adoption schemes)"
     )
     
     compulsory_purchase_orders: list[str] = Field(
@@ -52,9 +53,19 @@ class LocalAuthoritySearchExtraction(BaseModel):
         description="Compulsory purchase orders affecting the property"
     )
     
+    cil_liability: list[str] = Field(
+        default_factory=list,
+        description="Community Infrastructure Levy (CIL) mentions, liability, or charging schedule references"
+    )
+    
     further_action_required: bool | None = Field(
         default=None,
         description="Whether further enquiries or actions are recommended"
+    )
+    
+    further_action_details: list[str] = Field(
+        default_factory=list,
+        description="Specific details about recommended further enquiries or actions"
     )
     
     source_sections: list[str] = Field(
@@ -70,9 +81,11 @@ class LocalAuthorityChunkExtraction(BaseModel):
     """
     
     local_land_charges: list[str] = Field(default_factory=list)
-    planning_permissions: list[str] = Field(default_factory=list)
+    planning_register_entries: list[str] = Field(default_factory=list)
     enforcement_notices: list[str] = Field(default_factory=list)
     planning_breaches: list[str] = Field(default_factory=list)
     road_adoption_issues: list[str] = Field(default_factory=list)
     compulsory_purchase_orders: list[str] = Field(default_factory=list)
+    cil_liability: list[str] = Field(default_factory=list)
     further_action_required: bool | None = None
+    further_action_details: list[str] = Field(default_factory=list)

@@ -192,20 +192,41 @@ class LocalAuthorityRiskAnalyzer:
                     if len(issue) > 100 else f"Road adoption issue: {issue}"
                 )
         
+        # CIL liability - 🟠 MEDIUM (informational but requires attention)
+        # Legal basis: CIL may apply to new development and represents
+        # a potential future financial liability
+        if extraction.cil_liability:
+            for cil in extraction.cil_liability:
+                risks.append({
+                    "category": self.CATEGORY,
+                    "severity": "Medium",
+                    "issue": "CIL liability",
+                    "description": cil,
+                    "legal_rationale": "Community Infrastructure Levy may apply to future development"
+                })
+                risk_descriptions.append(
+                    f"CIL: {cil[:100]}..."
+                    if len(cil) > 100 else f"CIL: {cil}"
+                )
+        
         # Further action required - 🟠 MEDIUM
         # Legal basis: Document recommends further enquiries, indicating
         # incomplete information that should be resolved before exchange
         if extraction.further_action_required:
-            risks.append({
-                "category": self.CATEGORY,
-                "severity": "Medium",
-                "issue": "Further enquiries required",
-                "description": "The search indicates further enquiries are recommended",
-                "legal_rationale": "Outstanding enquiries should be resolved before exchange of contracts"
-            })
-            risk_descriptions.append(
-                "Further enquiries recommended - additional information required"
-            )
+            # Use details if available
+            details = extraction.further_action_details if extraction.further_action_details else ["Further enquiries are recommended"]
+            for detail in details:
+                risks.append({
+                    "category": self.CATEGORY,
+                    "severity": "Medium",
+                    "issue": "Further enquiries required",
+                    "description": detail,
+                    "legal_rationale": "Outstanding enquiries should be resolved before exchange of contracts"
+                })
+                risk_descriptions.append(
+                    f"Further action: {detail[:80]}..."
+                    if len(detail) > 80 else f"Further action: {detail}"
+                )
         
         # ============================================================
         # CALCULATE OVERALL SEVERITY
