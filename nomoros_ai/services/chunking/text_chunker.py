@@ -221,7 +221,7 @@ class TextChunker:
         
         return chunks
     
-    def _split_large_text(self, text: str, section_title: str = None) -> list[str]:
+    def _split_large_text(self, text: str, section_title: str | None = None) -> list[str]:
         """
         Split a large block of text at sentence boundaries.
         """
