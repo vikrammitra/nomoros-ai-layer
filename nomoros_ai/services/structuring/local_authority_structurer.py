@@ -175,10 +175,16 @@ class LocalAuthorityStructurer:
         Expected formats:
         - "98/43306/FUL - Description - PG/C 21/09/1998"
         - "10/62399 - 21/04/2010 - Description - PG/C"
+        - "A2008/12345 - Description"
+        - "LM/2010/123 - Description"
         """
-        # Try to extract reference (at start, before first dash or space)
-        ref_match = re.match(r"^([\d/]+(?:/\w+)?)", entry)
-        reference = ref_match.group(1) if ref_match else "Unknown"
+        # Try to extract reference - handles alphanumeric prefixes and various formats
+        # Patterns: 98/43306/FUL, 10/62399, A2008/12345, LM/2010/123, etc.
+        ref_match = re.match(r"^([A-Z]*\d+[/\-][\d/A-Z]+)", entry, re.IGNORECASE)
+        if not ref_match:
+            # Fallback: try simpler pattern
+            ref_match = re.match(r"^([\dA-Z]+[/\-][\dA-Z]+)", entry, re.IGNORECASE)
+        reference = ref_match.group(1) if ref_match else entry.split(" ")[0]
         
         # Try to extract date
         date_match = re.search(r"(\d{2}/\d{2}/\d{4})", entry)
@@ -211,6 +217,10 @@ class LocalAuthorityStructurer:
             description = re.sub(rf"\b{marker}\b", "", description, flags=re.IGNORECASE).strip(" -")
         
         description = re.sub(r"\s+", " ", description).strip(" -")
+        
+        # If description is empty, use original entry
+        if not description or len(description) < 5:
+            description = entry
         
         # Determine if historic (older than 10 years from 2020 search date)
         is_historic = True
