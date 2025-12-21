@@ -3,7 +3,7 @@
 ## Overview
 Legal conveyancing document processing backend API built with Python FastAPI. This service ingests PDF documents, extracts text using Azure Document Intelligence, and performs structured extraction and risk analysis for HM Land Registry Title Registers.
 
-**Current State**: Phase 2 - Title Register extraction and risk analysis working
+**Current State**: Phase 3 - All three document types fully supported with structured output
 
 ## Project Architecture
 
@@ -18,9 +18,18 @@ nomoros_ai/
 │   ├── ocr/
 │   │   └── azure_doc_intelligence.py  # Azure Document Intelligence wrapper
 │   ├── extract/
-│   │   └── title.py                 # Title Register extraction service
-│   └── risk/
-│       └── title_rules.py           # Rule-based risk detection
+│   │   ├── title.py                 # Title Register extraction service
+│   │   ├── search_environmental.py  # Environmental Search extraction
+│   │   └── search_local_authority.py # Local Authority extraction (LLM-assisted)
+│   ├── risk/
+│   │   ├── title_rules.py           # Rule-based risk detection
+│   │   ├── search_environmental_rules.py  # Environmental risk rules
+│   │   └── search_local_authority_rules.py # Local Authority risk rules
+│   ├── structuring/
+│   │   └── local_authority_structurer.py # Solicitor-friendly output formatting
+│   └── llm/
+│       ├── azure_openai_client.py   # Azure OpenAI wrapper (extraction only)
+│       └── chunk_text.py            # Text chunking for LLM
 ├── models/
 │   ├── document.py                  # Document ingestion models
 │   ├── request.py                   # API request models
@@ -36,6 +45,7 @@ nomoros_ai/
 - `POST /documents/title-risk` - Analyze OCR text for title risks
 - `POST /documents/search-risk` - Analyze Environmental Search for risks
 - `POST /documents/local-authority-risk` - Analyze Local Authority Search for risks (uses Azure OpenAI)
+- `POST /documents/local-authority-risk-structured` - Same as above with solicitor-friendly grouped output
 
 ## Required Environment Variables
 
@@ -52,6 +62,15 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2025-12-21: Structured output for Local Authority Search (solicitor-friendly)
+  - New endpoint: POST /documents/local-authority-risk-structured
+  - Key Issues Summary block at top (issues + clean areas)
+  - Local Land Charges grouped by type: Section 106, TPO, Smoke Control
+  - Planning Register entries with explicit fields: reference, description, decision, date
+  - Road Adoption findings with neutral implications
+  - CIL findings distinguishing regime (charging exists) vs liability (amount owed)
+  - Neutral issue labels: Transaction constraint, Ongoing obligation, Environmental regulation
+  - Presentation layer only - extraction and risk logic unchanged
 - 2025-12-20: LOCAL AUTHORITY Search extraction and risk analysis (v2 - stable)
   - LocalAuthoritySearchExtraction Pydantic model with comprehensive fields:
     - local_land_charges (Section 106, smoke control, TPO, financial charges)
