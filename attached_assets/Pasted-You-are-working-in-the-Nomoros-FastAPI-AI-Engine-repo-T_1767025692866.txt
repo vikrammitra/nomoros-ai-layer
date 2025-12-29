@@ -1,0 +1,114 @@
+You are working in the **Nomoros FastAPI AI Engine** repo.
+
+## Task
+
+Upgrade the existing **PDF ingestion endpoint** so that after OCR it **classifies the document type** and returns it in the response, without breaking the current behavior.
+
+## Endpoint to modify
+
+`POST /documents/ingest`
+
+It currently:
+
+* Validates Azure credentials exist
+* Validates the upload is a PDF
+* Sends PDF to **Azure Document Intelligence** for OCR
+* Returns extracted text + metadata in `DocumentIngestionResponse`
+
+## New requirement
+
+After OCR extraction, determine a `document_type` and `document_type_confidence` based on the extracted text and/or layout metadata, and include it in the response.
+
+### Supported document types (initial)
+
+Return one of:
+
+* `TITLE_REGISTER`
+* `LOCAL_AUTHORITY_SEARCH`
+* `ENVIRONMENTAL_SEARCH`
+* `TA6_PROPERTY_INFORMATION_FORM`
+* `TR1_TRANSFER_DEED`
+* `LEASE`
+* `UNKNOWN`
+
+### Output model changes
+
+Update `DocumentIngestionResponse` (Pydantic) to include:
+
+* `document_type: str`
+* `document_type_confidence: float` (0.0–1.0)
+* `classification_method: str` (e.g. `"rules_v1"`)
+
+Keep existing fields unchanged (backwards compatible).
+
+## Implementation approach (do not create a mess)
+
+1. Create a **single** classifier module:
+
+   * File: `app/services/document_classifier.py`
+   * Function: `classify_document(text: str) -> tuple[str, float, str]`
+   * Start with a **rules-based classifier** (fast + deterministic) using regex/keyword patterns.
+   * The classifier must be pure and testable (no FastAPI imports).
+
+2. Integrate into ingest flow:
+
+   * After OCR returns `extracted_text`, call `classify_document(extracted_text)`.
+   * Add results to `DocumentIngestionResponse`.
+
+3. Classification rules (v1)
+   Use robust heuristics:
+
+* TITLE_REGISTER:
+
+  * look for: `"Title number"`, `"A: Property Register"`, `"B: Proprietorship Register"`, `"C: Charges Register"`, `"This official copy is issued by the Land Registry"`
+* LOCAL_AUTHORITY_SEARCH:
+
+  * look for: `"LLC1"`, `"CON29"`, `"Local Land Charges Register"`, "**Local Authority Search**",`"Questions 1-"`
+* ENVIRONMENTAL_SEARCH:
+
+  * look for: `"Environmental Search"`, `"Flood Risk"`, `"Contaminated Land"`, `"Radon"`, `"Ground Stability"`
+* TA6:
+
+  * look for: `"TA6"`, `"Property Information Form"`, `"Seller"`, `"Property address"`, `"Boundaries"`
+* TR1:
+
+  * look for: `"TR1"`, `"Transfer"`, `"Panel"`, `"Transferor"`, `"Transferee"`, `"Consideration"`
+* LEASE:
+
+  * look for: `"Lease"`, `"Term:"`, `"Landlord"`, `"Tenant"`, `"Rent"`, `"Demise"`
+
+If multiple match, choose the highest confidence based on a simple scoring approach:
+
+* score = number of matched strong markers / total markers for that type
+* confidence = min(1.0, score)
+* If top score < threshold (e.g. 0.35), return UNKNOWN.
+
+4. Add unit tests
+
+* File: `tests/test_document_classifier.py`
+* Provide at least 1 short sample text per doc type
+* Ensure classification returns correct type + confidence
+
+5. Update OpenAPI docs
+
+* Ensure Swagger shows new response fields.
+* Keep request shape unchanged (still accepts file upload).
+
+## Constraints
+
+* Do NOT introduce LLM calls for classification in this task.
+* Keep it lightweight and deterministic for demo reliability.
+* Ensure errors remain the same:
+
+  * Missing Azure config → HTTPException
+  * Non-PDF upload → HTTPException
+
+## Deliverable
+
+A PR that:
+
+* Adds `document_classifier.py`
+* Updates ingest endpoint to return document_type + confidence
+* Updates `DocumentIngestionResponse` model
+* Adds unit tests for classifier
+* All existing ingestion behavior still works

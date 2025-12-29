@@ -12,6 +12,7 @@ from nomoros_ai.services.ocr.azure_doc_intelligence import (
     ExtractionResult
 )
 from nomoros_ai.services.classify import DocumentClassifier, classify_document, classify_search_subtype
+from nomoros_ai.services.document_classifier import classify_document as classify_for_ingest
 from nomoros_ai.services.extract.title import TitleExtractor
 from nomoros_ai.services.extract.search_environmental import EnvironmentalSearchExtractor
 from nomoros_ai.services.extract.search_local_authority import LocalAuthoritySearchExtractor
@@ -130,6 +131,9 @@ async def ingest_document(file: UploadFile = File(...)) -> DocumentIngestionResp
         else:
             message = f"Successfully extracted text from {result.page_count} page(s)"
         
+        # Classify the document type
+        doc_type, confidence, method = classify_for_ingest(result.text_content or "")
+        
         return DocumentIngestionResponse(
             success=True,
             message=message,
@@ -138,7 +142,10 @@ async def ingest_document(file: UploadFile = File(...)) -> DocumentIngestionResp
             full_text=result.text_content,
             file_size_mb=result.file_size_mb,
             processing_mode=result.processing_mode,
-            chunks_processed=result.chunks_processed
+            chunks_processed=result.chunks_processed,
+            document_type=doc_type,
+            document_type_confidence=round(confidence, 2),
+            classification_method=method
         )
         
     finally:

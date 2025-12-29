@@ -23,6 +23,9 @@ class DocumentIngestionResponse(BaseModel):
         file_size_mb: Size of the uploaded file in megabytes
         processing_mode: "sync" for small files, "chunked" for large files
         chunks_processed: Number of chunks processed (0 for sync mode)
+        document_type: Classified document type (e.g., TITLE_REGISTER, LOCAL_AUTHORITY_SEARCH)
+        document_type_confidence: Confidence score for classification (0.0-1.0)
+        classification_method: Method used for classification (e.g., "rules_v1")
     """
     success: bool
     message: str
@@ -33,6 +36,9 @@ class DocumentIngestionResponse(BaseModel):
     file_size_mb: float = 0.0
     processing_mode: str = "sync"
     chunks_processed: int = 0
+    document_type: Optional[str] = None
+    document_type_confidence: Optional[float] = None
+    classification_method: Optional[str] = None
 
 
 class HealthResponse(BaseModel):
