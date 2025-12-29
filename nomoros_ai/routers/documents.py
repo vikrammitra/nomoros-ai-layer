@@ -26,6 +26,8 @@ from nomoros_ai.models.search_environmental import EnvironmentalSearchResponse
 from nomoros_ai.models.search_local_authority_response import LocalAuthoritySearchResponse
 from nomoros_ai.models.search_local_authority_structured import StructuredLocalAuthorityResponse
 from nomoros_ai.services.structuring.local_authority_structurer import LocalAuthorityStructurer
+from nomoros_ai.services.extract.ta6 import TA6Extractor
+from nomoros_ai.models.ta6 import TA6ParseRequest, TA6ParseResponse
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -406,3 +408,70 @@ async def analyze_local_authority_risk_structured(request: TitleRiskRequest) -> 
         risk_summary=risk_summary.model_dump(),
         detailed_risks=detailed_risks
     )
+
+
+@router.post("/ta6-risk", response_model=TA6ParseResponse)
+async def analyze_ta6(request: TA6ParseRequest) -> TA6ParseResponse:
+    """
+    Analyze OCR text from a TA6 Property Information Form.
+    
+    This endpoint uses a chunked map-reduce strategy to handle large TA6 documents:
+    1. Chunks the text with overlap (handles 30+ page forms)
+    2. Extracts seller disclosures from each chunk using Azure OpenAI
+    3. Merges and deduplicates findings across chunks
+    4. Returns structured extraction with follow-up questions
+    
+    IMPORTANT: Azure OpenAI is used for EXTRACTION only. This endpoint
+    does not perform risk assessment - all risk decisions are made by
+    deterministic rules for auditability.
+    
+    Args:
+        request: TA6ParseRequest containing OCR text
+        
+    Returns:
+        TA6ParseResponse with extraction results
+    """
+    ocr_text = request.ocr_text
+    
+    if not ocr_text or not ocr_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="OCR text is required"
+        )
+    
+    # Extract TA6 data using map-reduce strategy
+    extractor = TA6Extractor()
+    
+    try:
+        # Get chunk count for accurate reporting
+        chunks = extractor.chunker.chunk_text(ocr_text)
+        chunks_count = len(chunks)
+        
+        extraction = extractor.extract(ocr_text)
+        
+        if not extraction.is_ta6:
+            return TA6ParseResponse(
+                success=False,
+                message="Document does not appear to be a TA6 Property Information Form",
+                status="NOT_TA6",
+                ta6_extraction=None,
+                error="No TA6 content detected",
+                chunks_processed=chunks_count
+            )
+        
+        return TA6ParseResponse(
+            success=True,
+            message=f"Successfully extracted TA6 data from {len(extraction.sections)} sections ({chunks_count} chunks processed)",
+            status="PARSED_TA6",
+            ta6_extraction=extraction,
+            chunks_processed=chunks_count
+        )
+        
+    except Exception as e:
+        return TA6ParseResponse(
+            success=False,
+            message="TA6 parsing failed",
+            status="FAILED",
+            ta6_extraction=None,
+            error=str(e)
+        )

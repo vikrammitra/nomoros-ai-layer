@@ -41,9 +41,9 @@ class AzureOpenAIClient:
     TEMPERATURE = 0  # Deterministic output
     # Note: gpt-5-nano-2 is a reasoning model that uses internal reasoning tokens
     # before generating the response. We need enough tokens for both reasoning
-    # and the actual JSON output. 4000 allows ~2000 reasoning + 2000 content.
-    MAX_TOKENS = 4000
-    TIMEOUT_SECONDS = 90
+    # and the actual JSON output. 8000 allows ~4000 reasoning + 4000 content.
+    MAX_TOKENS = 8000
+    TIMEOUT_SECONDS = 120
     MAX_RETRIES = 2
     
     def __init__(self, config: AzureOpenAIConfig | None = None):

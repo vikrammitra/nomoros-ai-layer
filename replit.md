@@ -3,7 +3,7 @@
 ## Overview
 Legal conveyancing document processing backend API built with Python FastAPI. This service ingests PDF documents, extracts text using Azure Document Intelligence, and performs structured extraction and risk analysis for HM Land Registry Title Registers.
 
-**Current State**: Phase 3 - All three document types fully supported with structured output
+**Current State**: Phase 4 - TA6 Property Information Form extraction with map-reduce strategy
 
 ## Project Architecture
 
@@ -20,7 +20,11 @@ nomoros_ai/
 │   ├── extract/
 │   │   ├── title.py                 # Title Register extraction service
 │   │   ├── search_environmental.py  # Environmental Search extraction
-│   │   └── search_local_authority.py # Local Authority extraction (LLM-assisted)
+│   │   ├── search_local_authority.py # Local Authority extraction (LLM-assisted)
+│   │   └── ta6.py                   # TA6 Property Info extraction (map-reduce)
+│   ├── chunking/
+│   │   ├── text_chunker.py          # Generic text chunking for LLM
+│   │   └── ta6_chunker.py           # TA6-specific chunking (header removal, overlap)
 │   ├── risk/
 │   │   ├── title_rules.py           # Rule-based risk detection
 │   │   ├── search_environmental_rules.py  # Environmental risk rules
@@ -28,12 +32,12 @@ nomoros_ai/
 │   ├── structuring/
 │   │   └── local_authority_structurer.py # Solicitor-friendly output formatting
 │   └── llm/
-│       ├── azure_openai_client.py   # Azure OpenAI wrapper (extraction only)
-│       └── chunk_text.py            # Text chunking for LLM
+│       └── azure_openai_client.py   # Azure OpenAI wrapper (extraction only)
 ├── models/
 │   ├── document.py                  # Document ingestion models
 │   ├── request.py                   # API request models
-│   └── title.py                     # Title extraction & risk models
+│   ├── title.py                     # Title extraction & risk models
+│   └── ta6.py                       # TA6 extraction models (questions, sections, evidence)
 └── audit/                           # Reserved for future audit logging
 ```
 
@@ -46,6 +50,7 @@ nomoros_ai/
 - `POST /documents/search-risk` - Analyze Environmental Search for risks
 - `POST /documents/local-authority-risk` - Analyze Local Authority Search for risks (uses Azure OpenAI)
 - `POST /documents/local-authority-risk-structured` - Same as above with solicitor-friendly grouped output
+- `POST /documents/ta6-risk` - Analyze TA6 Property Information Form (uses Azure OpenAI with map-reduce)
 
 ## Required Environment Variables
 
@@ -62,6 +67,17 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2025-12-29: TA6 Property Information Form extraction pipeline
+  - New endpoint: POST /documents/ta6-risk
+  - Map-reduce strategy for large TA6 documents (30+ pages)
+  - TA6-specific chunker with header/footer removal and 300 char overlap
+  - Comprehensive Pydantic models: TA6Question, TA6Section, TA6ExtractionResult
+  - Evidence tracking with character offsets for citation
+  - Contradiction detection and follow-up question generation
+  - Document metadata extraction (property address, seller names, form date)
+  - 20 unit tests for models and chunker
+  - Azure OpenAI integration (extraction only - no risk decisions)
+  - Increased max_completion_tokens to 8000 for reasoning models
 - 2025-12-21: Document classification added to ingest endpoint
   - New fields: document_type, document_type_confidence, classification_method
   - Supported types: TITLE_REGISTER, LOCAL_AUTHORITY_SEARCH, ENVIRONMENTAL_SEARCH, 

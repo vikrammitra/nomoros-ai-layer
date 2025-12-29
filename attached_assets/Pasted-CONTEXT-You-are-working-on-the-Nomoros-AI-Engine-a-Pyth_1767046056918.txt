@@ -1,0 +1,283 @@
+CONTEXT
+
+You are working on the Nomoros AI Engine, a Python FastAPI backend deployed on Replit.
+
+The system already supports:
+
+PDF upload
+
+OCR via Azure Document Intelligence
+
+Document classification
+
+Postgres persistence
+
+Azure OpenAI client setup
+
+You now need to implement a robust TA6 parsing pipeline that can safely handle large, multi-page TA6 PDFs (30+ pages) using a chunked map-reduce strategy, similar to how Environmental Search PDFs are handled.
+
+🎯 OBJECTIVE
+
+Create a FastAPI endpoint that:
+
+POST /documents/{document_id}/parse/ta6
+
+
+This endpoint:
+
+Loads OCR text for a TA6 document
+
+Chunks text safely for large documents
+
+Extracts TA6 facts per chunk
+
+Reduces partial results into one canonical TA6 structure
+
+Validates output using Pydantic
+
+Persists structured TA6 JSON
+
+Updates document processing status
+
+🧠 CHUNKING STRATEGY (MANDATORY)
+Why
+
+TA6 forms:
+
+Are long (30+ pages)
+
+Have repeated headers/footers
+
+Contain checkbox noise
+
+Will exceed token limits if processed in one pass
+
+Strategy to implement
+
+Step 1 – Normalise text
+
+Remove repeated page headers/footers (e.g. “Law Society TA6 (5th edition)”)
+
+Preserve character offsets after cleaning
+
+Step 2 – Chunking
+Chunk by:
+
+~3,000–3,500 characters
+
+With 300 char overlap
+
+Do NOT split mid-question if possible (best-effort)
+
+Each chunk should include:
+
+{
+  "chunk_id": int,
+  "text": str,
+  "char_start": int,
+  "char_end": int
+}
+
+
+Step 3 – Map phase
+
+Run TA6 extraction prompt on each chunk
+
+Output: partial TA6 JSON (same schema, but sparse)
+
+Step 4 – Reduce phase
+
+Merge sections/questions by:
+
+section_name
+
+question_id OR question_text
+
+De-duplicate evidence
+
+Merge contradictions
+
+Re-rank follow-up questions by priority
+
+🧱 PYDANTIC MODELS (ADD EXACTLY)
+from typing import List, Optional, Literal
+from pydantic import BaseModel
+
+class Evidence(BaseModel):
+    ref: Optional[str]
+    quote: str
+    char_start: int
+    char_end: int
+
+class TA6Question(BaseModel):
+    question_id: Optional[str]
+    question_text: str
+    answer_normalised: Literal[
+        "yes", "no", "unknown", "not_applicable", "details_provided"
+    ]
+    answer_raw: Optional[str]
+    details: Optional[str]
+    answer_status: Literal[
+        "clear", "unclear", "missing", "contradictory"
+    ]
+    clarification_question: Optional[str]
+    evidence: List[Evidence]
+
+class TA6Section(BaseModel):
+    section_name: str
+    questions: List[TA6Question]
+
+class TA6Contradiction(BaseModel):
+    type: str
+    description: str
+    items: List[dict]
+
+class TA6FollowUp(BaseModel):
+    priority: Literal["high", "medium", "low"]
+    question: str
+    reason: Literal[
+        "missing", "unclear", "contradiction", "attachment_referenced"
+    ]
+
+class TA6ExtractionResult(BaseModel):
+    is_ta6: bool
+    document_meta: dict
+    sections: List[TA6Section]
+    contradictions: List[TA6Contradiction]
+    missing_or_referenced_attachments: List[dict]
+    follow_up_questions: List[TA6FollowUp]
+
+🔌 FASTAPI ENDPOINT LOGIC
+Endpoint
+@router.post("/documents/{document_id}/parse/ta6")
+
+Logic flow
+
+Validate
+
+document exists
+
+document_type == "TA6"
+
+text_extracted == true
+
+Load OCR text
+
+full document text
+
+original char offsets
+
+Clean + chunk text
+
+remove repeating headers
+
+chunk with overlap
+
+MAP – LLM per chunk
+
+Use Azure OpenAI
+
+temperature = 0
+
+JSON-only output
+
+Use TA6 extraction prompt
+
+Store intermediate chunk outputs (optional, for debugging)
+
+REDUCE – Merge results
+
+Combine sections/questions
+
+Deduplicate evidence
+
+Merge contradictions
+
+Generate final follow-ups list
+
+Validate final output
+
+Parse into TA6ExtractionResult
+
+If invalid → mark document FAILED
+
+Persist
+
+Save JSON
+
+Save parser_version = "ta6_parser_v1"
+
+Update document status = PARSED_TA6
+
+Return response
+
+{
+  "document_id": "...",
+  "document_type": "TA6",
+  "status": "PARSED_TA6",
+  "ta6_extraction": { ... }
+}
+
+🧠 TA6 EXTRACTION PROMPT (MAP PHASE)
+
+Each chunk must use this logic:
+
+System
+
+You are a legal document extraction engine.
+Extract factual seller disclosures only from a UK TA6 Property Information Form.
+Do not infer. Do not assess risk. Do not provide legal advice.
+Return JSON only.
+
+
+User
+
+You are given PARTIAL text from a TA6 form.
+
+TASK:
+- Confirm if this text belongs to a TA6
+- Extract any TA6 questions + answers present
+- Capture checkboxes as yes/no where explicit
+- Record missing or unclear answers
+- Capture evidence quotes with character offsets
+- Do NOT assume missing sections exist
+
+If no TA6 content is present in this chunk, return:
+{ "is_ta6": false }
+
+Text:
+{{chunk_text}}
+
+⚠️ CRITICAL RULES (DO NOT IGNORE)
+
+Never hallucinate missing answers
+
+Absence of a tick ≠ “No”
+
+“See attached” without attachment → missing_or_referenced_attachments
+
+Repeated headers must be ignored
+
+Evidence quotes max 25 words
+
+🧪 TESTING REQUIREMENTS
+
+Add:
+
+One test using a real TA6 PDF (large)
+
+One test where TA6 content spans multiple chunks
+
+One negative test (non-TA6 document)
+
+✅ FINAL RESULT
+
+When complete, Nomoros AI Engine must:
+
+Reliably parse large TA6 PDFs
+
+Produce grounded, citation-backed JSON
+
+Be safe for investor demos
+
+Be ready for risk aggregation downstream

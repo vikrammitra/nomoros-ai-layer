@@ -1,0 +1,237 @@
+Perfect — below is a **copy-paste Replit prompt** that tells Replit AI to **add a TA6 parsing endpoint** to your **Nomoros AI Engine (FastAPI)**, aligned with everything you’ve built so far (Azure Document Intelligence, TA6 pipeline prompt, structured outputs, agentic flow).
+
+This is written exactly in the style that works well with Replit’s agent.
+
+---
+
+## 🔧 Replit Prompt: TA6 Parsing Endpoint for Nomoros AI Engine
+
+**Paste this directly into Replit AI**
+
+---
+
+**Context**
+
+You are working in the **Nomoros AI Engine**, a Python **FastAPI** backend deployed on Replit.
+
+The system already supports:
+
+* PDF upload
+* OCR via **Azure Document Intelligence**
+* Document classification
+* Structured JSON outputs stored per document
+* Postgres persistence (documents, matters, processing status)
+
+We now want to add a **TA6-specific parsing pipeline**.
+
+---
+
+### 🎯 Objective
+
+Create a **FastAPI endpoint** that:
+
+1. Accepts a **document_id** for a previously uploaded document
+2. Retrieves the extracted OCR text for that document
+3. Runs a **TA6 extraction pipeline** using **Azure OpenAI**
+4. Produces **strict structured JSON output** for TA6
+5. Persists the result and updates document processing status
+6. Returns the structured TA6 extraction payload
+
+---
+
+### 📍 Endpoint to create
+
+```http
+POST /documents/{document_id}/parse/ta6
+```
+
+---
+
+### 🧠 Processing Logic (step-by-step)
+
+Implement the endpoint with the following logic:
+
+#### 1. Validate inputs
+
+* Confirm `document_id` exists
+* Confirm document has:
+
+  * `text_extracted = true`
+  * `document_type = "TA6"`
+* If not, return HTTP 400 with clear error message
+
+#### 2. Load OCR text
+
+* Retrieve full extracted text from storage (DB or blob store)
+* Preserve character offsets (do not re-chunk yet)
+
+#### 3. Prepare TA6 LLM prompt
+
+* Use a **system + user prompt** structure
+* Enforce:
+
+  * JSON-only output
+  * No hallucination
+  * Evidence quotes with char offsets
+* The LLM prompt must:
+
+  * Confirm the document is a TA6
+  * Extract structured sections
+  * Identify contradictions
+  * Identify missing or referenced attachments
+  * Generate follow-up questions
+
+(Assume the TA6 prompt text is stored in a constant or template file.)
+
+#### 4. Call Azure OpenAI
+
+* Use existing Azure OpenAI client
+* Use:
+
+  * `temperature = 0`
+  * `response_format = json`
+* Pass full extracted text (truncate safely if token limits are exceeded)
+
+#### 5. Validate LLM output
+
+* Parse JSON
+* Validate against a Pydantic model:
+
+  * `TA6ExtractionResult`
+* If validation fails:
+
+  * Mark document status = `FAILED`
+  * Persist error message
+
+#### 6. Persist results
+
+Store:
+
+* `ta6_extraction_json`
+* `parsed_at`
+* `parser_version`
+* Update document status to:
+
+  ```text
+  PARSED_TA6
+  ```
+
+#### 7. Return response
+
+Return:
+
+```json
+{
+  "document_id": "...",
+  "document_type": "TA6",
+  "status": "PARSED_TA6",
+  "ta6_extraction": { ... }
+}
+```
+
+---
+
+### 🧱 Data Models to Add (Pydantic)
+
+Create the following models:
+
+```python
+class Evidence(BaseModel):
+    ref: Optional[str]
+    quote: str
+    char_start: int
+    char_end: int
+
+class TA6Question(BaseModel):
+    question_id: Optional[str]
+    question_text: str
+    answer_normalised: Literal[
+        "yes", "no", "unknown", "not_applicable", "details_provided"
+    ]
+    answer_raw: Optional[str]
+    details: Optional[str]
+    answer_status: Literal["clear", "unclear", "missing", "contradictory"]
+    clarification_question: Optional[str]
+    evidence: List[Evidence]
+
+class TA6Section(BaseModel):
+    section_name: str
+    questions: List[TA6Question]
+
+class TA6Contradiction(BaseModel):
+    type: str
+    description: str
+    items: List[dict]
+
+class TA6FollowUp(BaseModel):
+    priority: Literal["high", "medium", "low"]
+    question: str
+    reason: Literal[
+        "missing", "unclear", "contradiction", "attachment_referenced"
+    ]
+
+class TA6ExtractionResult(BaseModel):
+    is_ta6: bool
+    document_meta: dict
+    sections: List[TA6Section]
+    contradictions: List[TA6Contradiction]
+    missing_or_referenced_attachments: List[dict]
+    follow_up_questions: List[TA6FollowUp]
+```
+
+---
+
+### ⚙️ Status & Observability
+
+Add:
+
+* Logging at each step
+* Clear error messages
+* Processing timestamps
+* Parser version constant (e.g. `"ta6_parser_v1"`)
+
+---
+
+### 🧪 Testing
+
+Add:
+
+* One unit test using a real TA6-style PDF text
+* One negative test where document_type ≠ TA6
+
+---
+
+### 🧠 Design Constraints
+
+* Do NOT perform legal interpretation
+* Do NOT score risk here
+* This endpoint is **facts-first**
+* Risk analysis happens downstream at the matter aggregation layer
+
+---
+
+### ✅ Final Deliverable
+
+When complete, the Nomoros AI Engine must support:
+
+```http
+POST /documents/{document_id}/parse/ta6
+```
+
+Returning a **fully structured, citation-backed TA6 extraction** ready for:
+
+* Matter aggregation
+* Risk analysis
+* Solicitor review
+* Investor demo
+
+---
+
+If you want, next I can:
+
+* Generate the **exact TA6 system prompt file** (`ta6_prompt.py`)
+* Create the **matter-level aggregator endpoint**
+* Design the **UI contract** for showing TA6 insights cleanly
+* Harden this for **checkbox-heavy PDFs** (very relevant for TA6)
+
+Just tell me the next step.
