@@ -67,7 +67,7 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
-- 2025-12-29: TA6 Property Information Form extraction pipeline
+- 2025-12-29: TA6 Property Information Form extraction and risk analysis pipeline
   - New endpoint: POST /documents/ta6-risk
   - Map-reduce strategy for large TA6 documents (30+ pages)
   - TA6-specific chunker with header/footer removal and 300 char overlap
@@ -75,9 +75,14 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
   - Evidence tracking with character offsets for citation
   - Contradiction detection and follow-up question generation
   - Document metadata extraction (property address, seller names, form date)
+  - DETERMINISTIC risk rules (no LLM for risk decisions):
+    - HIGH: Boundary disputes, Japanese knotweed, flooding, insurance issues, contradictions
+    - MEDIUM: Road schemes, unauthorized alterations, occupiers, failed sales, missing docs
+    - LOW: Informal arrangements, unclear boundary ownership, incomplete answers
+  - Risk categories: Boundaries, Disputes, Notices, Alterations, Environmental, Insurance, Occupiers, Services
   - 20 unit tests for models and chunker
-  - Azure OpenAI integration (extraction only - no risk decisions)
-  - Increased max_completion_tokens to 8000 for reasoning models
+  - Azure OpenAI integration (extraction only - risk decisions are rule-based)
+  - Increased max_completion_tokens to 16000 for reasoning models
 - 2025-12-21: Document classification added to ingest endpoint
   - New fields: document_type, document_type_confidence, classification_method
   - Supported types: TITLE_REGISTER, LOCAL_AUTHORITY_SEARCH, ENVIRONMENTAL_SEARCH, 

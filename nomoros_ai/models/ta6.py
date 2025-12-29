@@ -116,6 +116,8 @@ class TA6ParseResponse(BaseModel):
     document_type: str = Field("TA6", description="Document type")
     status: Literal["PARSED_TA6", "FAILED", "NOT_TA6"] = Field(..., description="Processing status")
     ta6_extraction: Optional[TA6ExtractionResult] = Field(None, description="Extraction result if successful")
+    risk_summary: Optional[dict] = Field(None, description="Summary of identified risks")
+    detailed_risks: Optional[List[dict]] = Field(None, description="List of detailed risk items")
     parser_version: str = Field("ta6_parser_v1", description="Parser version used")
     chunks_processed: int = Field(0, description="Number of chunks processed")
     error: Optional[str] = Field(None, description="Error message if failed")

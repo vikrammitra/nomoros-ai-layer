@@ -27,6 +27,7 @@ from nomoros_ai.models.search_local_authority_response import LocalAuthoritySear
 from nomoros_ai.models.search_local_authority_structured import StructuredLocalAuthorityResponse
 from nomoros_ai.services.structuring.local_authority_structurer import LocalAuthorityStructurer
 from nomoros_ai.services.extract.ta6 import TA6Extractor
+from nomoros_ai.services.risk.ta6_rules import TA6RiskAnalyzer
 from nomoros_ai.models.ta6 import TA6ParseRequest, TA6ParseResponse
 
 
@@ -459,11 +460,17 @@ async def analyze_ta6(request: TA6ParseRequest) -> TA6ParseResponse:
                 chunks_processed=chunks_count
             )
         
+        # Apply deterministic risk rules
+        risk_analyzer = TA6RiskAnalyzer()
+        risk_summary, detailed_risks = risk_analyzer.analyze(extraction)
+        
         return TA6ParseResponse(
             success=True,
             message=f"Successfully extracted TA6 data from {len(extraction.sections)} sections ({chunks_count} chunks processed)",
             status="PARSED_TA6",
             ta6_extraction=extraction,
+            risk_summary=risk_summary.model_dump(),
+            detailed_risks=[r.model_dump() for r in detailed_risks],
             chunks_processed=chunks_count
         )
         
