@@ -62,6 +62,13 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2025-12-21: Document classification added to ingest endpoint
+  - New fields: document_type, document_type_confidence, classification_method
+  - Supported types: TITLE_REGISTER, LOCAL_AUTHORITY_SEARCH, ENVIRONMENTAL_SEARCH, 
+    TA6_PROPERTY_INFORMATION_FORM, TR1_TRANSFER_DEED, LEASE, UNKNOWN
+  - Scoring-based confidence (matched markers / total markers)
+  - Pure, testable classifier module (no LLM calls)
+  - 11 unit tests covering all document types
 - 2025-12-21: Structured output for Local Authority Search (solicitor-friendly)
   - New endpoint: POST /documents/local-authority-risk-structured
   - Key Issues Summary block at top (issues + clean areas)
