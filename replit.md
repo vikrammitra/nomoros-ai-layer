@@ -54,11 +54,26 @@ nomoros_ai/
 
 ## Required Environment Variables
 
+- `INTERNAL_API_KEY` - Secret API key for authenticating internal service calls (required)
 - `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` - Azure Document Intelligence endpoint URL
 - `AZURE_DOCUMENT_INTELLIGENCE_KEY` - Azure API key
 - `AZURE_OPENAI_ENDPOINT` - Azure OpenAI endpoint URL (optional, for Local Authority extraction)
 - `AZURE_OPENAI_API_KEY` - Azure OpenAI API key (optional)
 - `AZURE_OPENAI_DEPLOYMENT` - Azure OpenAI deployment name (e.g., gpt-4o)
+
+## API Authentication
+
+All `/documents/*` endpoints require API key authentication:
+
+```bash
+curl -X POST "https://your-api.replit.app/documents/ingest" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "file=@document.pdf"
+```
+
+- **Header**: `x-api-key`
+- **401 Response**: `{"detail": "Unauthorized"}` if key is missing or invalid
+- **Public endpoints**: `/`, `/health` (no auth required)
 
 ## Running the Application
 

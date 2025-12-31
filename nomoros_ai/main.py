@@ -7,25 +7,44 @@ conveyancing document processing backend.
 Features:
 - Health check endpoint
 - Document ingestion with Azure Document Intelligence OCR
+- API key authentication for all protected endpoints
 
 To run locally:
     uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from nomoros_ai.config import settings, validate_azure_credentials
 from nomoros_ai.routers import documents
 from nomoros_ai.models.document import HealthResponse
+from nomoros_ai.auth import validate_api_key_configured
 
 
-# Create FastAPI application
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan handler for startup/shutdown events.
+    
+    On startup:
+    - Validates that INTERNAL_API_KEY is configured
+    - Raises RuntimeError if secret is missing
+    """
+    # Startup: Validate required secrets are configured
+    validate_api_key_configured()
+    yield
+    # Shutdown: No cleanup needed
+
+
+# Create FastAPI application with lifespan handler
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="Legal conveyancing document processing API with Azure Document Intelligence OCR",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # Include routers

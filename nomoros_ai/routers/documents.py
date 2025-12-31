@@ -2,11 +2,14 @@
 Document processing router.
 
 Handles document ingestion, OCR extraction, and title risk analysis endpoints.
+
+All endpoints are protected by API key authentication via the x-api-key header.
 """
 
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
 
 from nomoros_ai.config import settings, validate_azure_credentials
+from nomoros_ai.auth import verify_api_key
 from nomoros_ai.services.ocr.azure_doc_intelligence import (
     AzureDocumentIntelligenceService,
     ExtractionResult
@@ -31,7 +34,13 @@ from nomoros_ai.services.risk.ta6_rules import TA6RiskAnalyzer
 from nomoros_ai.models.ta6 import TA6ParseRequest, TA6ParseResponse
 
 
-router = APIRouter(prefix="/documents", tags=["documents"])
+# All endpoints in this router require API key authentication
+# The verify_api_key dependency checks the x-api-key header
+router = APIRouter(
+    prefix="/documents",
+    tags=["documents"],
+    dependencies=[Depends(verify_api_key)]
+)
 
 
 @router.post("/ingest", response_model=DocumentIngestionResponse)
