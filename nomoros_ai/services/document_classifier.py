@@ -62,13 +62,23 @@ CLASSIFICATION_MARKERS = {
         "groundsure",
     ],
     "TA6_PROPERTY_INFORMATION_FORM": [
+        # Strong unique markers - Law Society TA6 form specific
         "ta6",
+        "law society property information form",
         "property information form",
-        "seller",
-        "property address",
-        "boundaries",
+        "law society ta6",
+        # Section headers unique to TA6
         "disputes and complaints",
-        "alterations, planning",
+        "alterations, planning and building control",
+        "notices and proposals",
+        "guarantees and warranties",
+        "occupiers and employees",
+        "services",
+        # Structure markers
+        "instructions to the seller",
+        "instructions to the buyer",
+        "seller's solicitor",
+        "full names of the seller",
     ],
     "TR1_TRANSFER_DEED": [
         "tr1",
@@ -80,14 +90,16 @@ CLASSIFICATION_MARKERS = {
         "execution",
     ],
     "LEASE": [
-        "lease",
-        "term:",
-        "landlord",
-        "tenant",
-        "rent",
-        "demise",
-        "term of years",
-        "ground rent",
+        # More specific lease markers to avoid matching TA6 definitions
+        "this lease is made",
+        "hereby demises",
+        "demised premises",
+        "the landlord covenants",
+        "the tenant covenants",
+        "term of this lease",
+        "reserved rent",
+        "service charge",
+        "yielding and paying",
     ],
 }
 
