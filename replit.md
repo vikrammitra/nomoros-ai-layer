@@ -175,3 +175,4 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 - No over-abstraction
 - Deterministic, auditable risk decisions
 - Designed for future Azure migration
+- **Always use structured Local Authority Search** (`/documents/local-authority-risk-structured`) - never use the basic endpoint
