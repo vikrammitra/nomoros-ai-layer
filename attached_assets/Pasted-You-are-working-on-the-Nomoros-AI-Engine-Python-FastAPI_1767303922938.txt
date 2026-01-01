@@ -1,0 +1,196 @@
+You are working on the Nomoros AI Engine (Python FastAPI on Replit). Implement ONE new endpoint that the UI will call later.
+
+GOAL
+Create a demo-safe, deterministic compliance ingest + summary endpoint for:
+- AML/ID provider reports (PDF)
+- Source of Funds (SoF) evidence (PDF)
+- Optional provider status JSON (source of truth for pass/fail)
+Use Azure Document Intelligence to extract text.
+Use Azure OpenAI ONLY to produce a “draft compliance summary” (wording only). The LLM MUST NEVER decide statuses or gate eligibility.
+
+ABSOLUTE RULES
+1) Deterministic statuses are the ONLY source of truth. If provider status is not provided, status must default to REVIEW_REQUIRED (never inferred from PDFs).
+2) LLM is non-authoritative: summarises deterministic state + provider flags + missing evidence. It must not set statuses, not infer pass/fail, not sign off.
+3) Endpoint must never fail a demo because the LLM failed. If LLM errors, return a deterministic fallback summary.
+4) Return structured JSON for the UI.
+
+============================================================
+A) Environment variables (Replit Secrets)
+============================================================
+Add these Secrets:
+
+AZURE_DI_ENDPOINT
+AZURE_DI_KEY
+
+AZURE_OPENAI_ENDPOINT
+AZURE_OPENAI_KEY
+AZURE_OPENAI_API_VERSION   (default: 2024-02-15-preview)
+AZURE_OPENAI_DEPLOYMENT
+
+OPTIONAL:
+COMPLIANCE_STORE_PATH (default: ./data/compliance_store.json)  # simple demo persistence
+
+============================================================
+B) Add dependencies
+============================================================
+Update requirements.txt:
+
+fastapi
+uvicorn
+pydantic
+python-multipart
+azure-ai-formrecognizer
+azure-core
+openai
+
+============================================================
+C) Implement endpoint
+============================================================
+Create a new router file:
+app/api/routes/compliance.py
+
+Add:
+POST /api/compliance/ingest
+
+Request (multipart/form-data):
+- matter_id: string (required)
+- provider: "thirdfort" | "credas" | "other" (required)
+- check_type: "ID_AML" | "SOF" | "BOTH" (required)
+- provider_status_json: string (optional; JSON string)
+- provider_reports: list[PDF] (optional)
+- sof_evidence: list[PDF] (optional)
+
+Response JSON must include:
+- deterministic_state (statuses + flags + missing items)
+- llm_draft (draft compliance summary; optional)
+- fallback_summary_used (bool)
+- artifacts metadata
+- gate_eligibility (deterministic)
+
+============================================================
+D) Deterministic statuses + eligibility (NO LLM)
+============================================================
+
+Implement enums:
+Provider: thirdfort | credas | other
+CheckType: ID_AML | SOF | BOTH
+DeterministicStatus: NOT_STARTED | PENDING | PASSED | FAILED | REVIEW_REQUIRED
+
+ProviderStatusPayload model (optional input):
+- provider_reference_id: str | None
+- id_aml_status: DeterministicStatus | None
+- sof_status: DeterministicStatus | None
+- flags: list[str] default []
+- red_flags_found: bool | None
+- last_updated_at: str | None
+
+DeterministicComplianceState output:
+- matter_id, provider, provider_reference_id
+- id_aml_status, sof_status
+- red_flags_found
+- provider_flags
+- missing_items
+- computed_at (UTC ISO)
+
+Rules:
+1) If provider_status_json contains id_aml_status/sof_status, use them.
+2) If a status is missing but the check_type expects it, set it to REVIEW_REQUIRED.
+3) red_flags_found:
+   - if payload.red_flags_found is present, use it
+   - else red_flags_found = (len(flags) > 0)
+4) missing_items must list clear reasons:
+   - "Provider AML/ID report missing (or structured provider status not supplied)." when applicable
+   - "SoF evidence documents missing." when applicable
+   - "ID/AML not cleared (status: X)." when status != PASSED
+   - "Source of Funds not verified (status: Y)." when status != PASSED
+   - "Provider reported red flags — solicitor review required." when red_flags_found==true
+
+Gate eligibility (deterministic):
+- aml = (id_aml_status == PASSED) AND (red_flags_found == false)
+- sof = (sof_status == PASSED) AND (red_flags_found == false)
+
+============================================================
+E) Azure Document Intelligence text extraction (PDF)
+============================================================
+
+Implement:
+app/services/document_extraction.py
+
+Use DocumentAnalysisClient with "prebuilt-read".
+Return:
+- extracted_text (string)
+- page_count (int|None)
+
+Also implement snippet_for_llm(text):
+- returns up to ~1800 chars
+- prefer lines containing keywords: pep, sanctions, adverse media, match, refer, failed, risk, source of funds, aml, kyc
+
+IMPORTANT: do not do OCR loops; single pass per file.
+
+============================================================
+F) Azure OpenAI draft compliance summary (Assistant layer only)
+============================================================
+
+Implement:
+app/services/llm_compliance_summary.py
+
+Function generate_llm_compliance_draft(state, provider_snippet, sof_snippet) -> dict
+
+- temperature 0.1
+- response_format JSON object
+- Strictly instruct: DO NOT decide pass/fail; only summarise deterministic state.
+
+Required outputs:
+- draft_label = "Draft — requires solicitor review"
+- compliance_summary_short (1–2 lines)
+- key_flags (bullets)
+- missing_evidence (bullets)
+- confidence_note (1 line)
+- generated_at + model_info
+
+If LLM fails for any reason:
+- fallback_summary_used = true
+- return deterministic fallback summary:
+  If PASSED/PASSED and no red flags:
+    "ID verified, AML cleared, SoF evidence received, no red flags reported by provider."
+  else:
+    "Compliance review required: ID/AML status = X, SoF status = Y, red flags = Z. Missing/notes: ..."
+
+============================================================
+G) Demo-safe persistence
+============================================================
+
+Implement a very simple JSON store (file-based) so GET later is possible:
+app/services/compliance_store.py
+
+- save latest per matter_id: state + llm_draft + artifacts + eligibility
+- file path from COMPLIANCE_STORE_PATH (default ./data/compliance_store.json)
+- create folder if missing
+
+Optional but recommended: add GET /api/matters/{matter_id}/compliance/summary
+Return the latest stored record.
+
+============================================================
+H) File structure required
+============================================================
+
+- app/main.py  (include router)
+- app/api/routes/compliance.py
+- app/services/document_extraction.py
+- app/services/compliance_rules.py
+- app/services/llm_compliance_summary.py
+- app/services/compliance_store.py
+- app/models/compliance.py  (Pydantic models + enums)
+
+Ensure the app runs on Replit and the endpoint is visible in /docs.
+
+============================================================
+I) Implementation details
+============================================================
+
+- Validate uploads are PDFs only (content-type application/pdf)
+- Use python-multipart for file handling
+- Never crash the endpoint due to missing Azure OpenAI: if AZURE_OPENAI_DEPLOYMENT missing, return deterministic fallback draft and set fallback_summary_used=true
+- Return JSON response that UI can render directly.
+
+NOW IMPLEMENT THIS ENDPOINT AND SUPPORTING MODULES.

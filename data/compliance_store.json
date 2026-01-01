@@ -1,0 +1,185 @@
+{
+  "TEST-001": {
+    "matter_id": "TEST-001",
+    "deterministic_state": {
+      "matter_id": "TEST-001",
+      "provider": "thirdfort",
+      "provider_reference_id": null,
+      "id_aml_status": "REVIEW_REQUIRED",
+      "sof_status": "NOT_STARTED",
+      "red_flags_found": false,
+      "provider_flags": [],
+      "missing_items": [
+        "Provider AML/ID report missing (or structured provider status not supplied).",
+        "ID/AML not cleared (status: REVIEW_REQUIRED)."
+      ],
+      "computed_at": "2026-01-01T21:49:31.614522Z"
+    },
+    "gate_eligibility": {
+      "aml_eligible": false,
+      "sof_eligible": false,
+      "fully_eligible": false
+    },
+    "llm_draft": {
+      "draft_label": "Draft \u2014 requires solicitor review",
+      "compliance_summary_short": "Compliance review required: ID/AML status = REVIEW_REQUIRED, SoF status = NOT_STARTED, red flags = False. Missing/notes: Provider AML/ID report missing (or structured provider status not supplied).; ID/AML not cleared (status: REVIEW_REQUIRED).",
+      "key_flags": [],
+      "missing_evidence": [
+        "Provider AML/ID report missing (or structured provider status not supplied).",
+        "ID/AML not cleared (status: REVIEW_REQUIRED)."
+      ],
+      "confidence_note": "Generated from deterministic state (LLM unavailable)",
+      "generated_at": "2026-01-01T21:49:34.694362Z",
+      "model_info": "Deterministic fallback",
+      "fallback_used": true
+    },
+    "artifacts": [],
+    "stored_at": "2026-01-01T21:49:34.694425Z"
+  },
+  "TEST-002": {
+    "matter_id": "TEST-002",
+    "deterministic_state": {
+      "matter_id": "TEST-002",
+      "provider": "credas",
+      "provider_reference_id": "CRED-123456",
+      "id_aml_status": "PASSED",
+      "sof_status": "PASSED",
+      "red_flags_found": false,
+      "provider_flags": [],
+      "missing_items": [
+        "SoF evidence documents missing."
+      ],
+      "computed_at": "2026-01-01T21:49:43.537538Z"
+    },
+    "gate_eligibility": {
+      "aml_eligible": true,
+      "sof_eligible": true,
+      "fully_eligible": true
+    },
+    "llm_draft": {
+      "draft_label": "Draft \u2014 requires solicitor review",
+      "compliance_summary_short": "ID verified, AML cleared, SoF evidence received, no red flags reported by provider.",
+      "key_flags": [],
+      "missing_evidence": [
+        "SoF evidence documents missing."
+      ],
+      "confidence_note": "Generated from deterministic state (LLM unavailable)",
+      "generated_at": "2026-01-01T21:49:45.048158Z",
+      "model_info": "Deterministic fallback",
+      "fallback_used": true
+    },
+    "artifacts": [],
+    "stored_at": "2026-01-01T21:49:45.048215Z"
+  },
+  "TEST-003": {
+    "matter_id": "TEST-003",
+    "deterministic_state": {
+      "matter_id": "TEST-003",
+      "provider": "thirdfort",
+      "provider_reference_id": "TF-999",
+      "id_aml_status": "PASSED",
+      "sof_status": "PENDING",
+      "red_flags_found": true,
+      "provider_flags": [
+        "PEP Match",
+        "Adverse Media"
+      ],
+      "missing_items": [
+        "SoF evidence documents missing.",
+        "Source of Funds not verified (status: PENDING).",
+        "Provider reported red flags \u2014 solicitor review required."
+      ],
+      "computed_at": "2026-01-01T21:49:55.268396Z"
+    },
+    "gate_eligibility": {
+      "aml_eligible": false,
+      "sof_eligible": false,
+      "fully_eligible": false
+    },
+    "llm_draft": {
+      "draft_label": "Draft \u2014 requires solicitor review",
+      "compliance_summary_short": "Compliance review required: ID/AML status = PASSED, SoF status = PENDING, red flags = True. Missing/notes: SoF evidence documents missing.; Source of Funds not verified (status: PENDING).; Provider reported red flags \u2014 solicitor review required.",
+      "key_flags": [
+        "PEP Match",
+        "Adverse Media"
+      ],
+      "missing_evidence": [
+        "SoF evidence documents missing.",
+        "Source of Funds not verified (status: PENDING).",
+        "Provider reported red flags \u2014 solicitor review required."
+      ],
+      "confidence_note": "Generated from deterministic state (LLM unavailable)",
+      "generated_at": "2026-01-01T21:49:56.223334Z",
+      "model_info": "Deterministic fallback",
+      "fallback_used": true
+    },
+    "artifacts": [],
+    "stored_at": "2026-01-01T21:49:56.223388Z"
+  },
+  "SOF-ONLY-001": {
+    "matter_id": "SOF-ONLY-001",
+    "deterministic_state": {
+      "matter_id": "SOF-ONLY-001",
+      "provider": "thirdfort",
+      "provider_reference_id": null,
+      "id_aml_status": "NOT_STARTED",
+      "sof_status": "PASSED",
+      "red_flags_found": false,
+      "provider_flags": [],
+      "missing_items": [
+        "SoF evidence documents missing."
+      ],
+      "computed_at": "2026-01-01T21:51:58.370155Z"
+    },
+    "gate_eligibility": {
+      "aml_eligible": true,
+      "sof_eligible": true,
+      "fully_eligible": true
+    },
+    "llm_draft": {
+      "draft_label": "Draft \u2014 requires solicitor review",
+      "compliance_summary_short": "Compliance review required: ID/AML status = NOT_STARTED, SoF status = PASSED, red flags = False. Missing/notes: SoF evidence documents missing.",
+      "key_flags": [],
+      "missing_evidence": [
+        "SoF evidence documents missing."
+      ],
+      "confidence_note": "Generated from deterministic state (LLM unavailable)",
+      "generated_at": "2026-01-01T21:52:00.487878Z",
+      "model_info": "Deterministic fallback",
+      "fallback_used": true
+    },
+    "artifacts": [],
+    "stored_at": "2026-01-01T21:52:00.487945Z"
+  },
+  "AML-ONLY-001": {
+    "matter_id": "AML-ONLY-001",
+    "deterministic_state": {
+      "matter_id": "AML-ONLY-001",
+      "provider": "credas",
+      "provider_reference_id": null,
+      "id_aml_status": "PASSED",
+      "sof_status": "NOT_STARTED",
+      "red_flags_found": false,
+      "provider_flags": [],
+      "missing_items": [],
+      "computed_at": "2026-01-01T21:52:00.543451Z"
+    },
+    "gate_eligibility": {
+      "aml_eligible": true,
+      "sof_eligible": true,
+      "fully_eligible": true
+    },
+    "llm_draft": {
+      "draft_label": "Draft \u2014 requires solicitor review",
+      "compliance_summary_short": "Compliance review required: ID/AML status = PASSED, SoF status = NOT_STARTED, red flags = False. Missing/notes: None",
+      "key_flags": [],
+      "missing_evidence": [],
+      "confidence_note": "Generated from deterministic state (LLM unavailable)",
+      "generated_at": "2026-01-01T21:52:01.432984Z",
+      "model_info": "Deterministic fallback",
+      "fallback_used": true
+    },
+    "artifacts": [],
+    "stored_at": "2026-01-01T21:52:01.433041Z"
+  }
+}

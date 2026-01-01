@@ -51,6 +51,8 @@ nomoros_ai/
 - `POST /documents/local-authority-risk` - Analyze Local Authority Search for risks (uses Azure OpenAI)
 - `POST /documents/local-authority-risk-structured` - Same as above with solicitor-friendly grouped output
 - `POST /documents/ta6-risk` - Analyze TA6 Property Information Form (uses Azure OpenAI with map-reduce)
+- `POST /documents/compliance/ingest` - AML/ID and Source of Funds compliance ingest (demo-safe)
+- `GET /documents/compliance/{matter_id}` - Retrieve stored compliance summary
 
 ## Required Environment Variables
 
@@ -82,6 +84,19 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2026-01-01: AML/ID and Source of Funds compliance ingest endpoint
+  - New endpoints: POST /documents/compliance/ingest, GET /documents/compliance/{matter_id}
+  - CRITICAL DESIGN: Deterministic statuses are the ONLY source of truth
+  - LLM is non-authoritative: generates draft summaries only, NEVER decides pass/fail
+  - Demo-safe: endpoint never fails due to LLM issues (fallback summary provided)
+  - Providers: thirdfort, credas, other
+  - Check types: ID_AML, SOF, BOTH
+  - Status values: NOT_STARTED, PENDING, PASSED, FAILED, REVIEW_REQUIRED
+  - Gate eligibility: aml_eligible = (PASSED AND no red flags), sof_eligible = (PASSED AND no red flags)
+  - SOF-only and ID_AML-only flows supported (non-applicable checks marked NOT_STARTED)
+  - JSON file persistence for demo retrieval (COMPLIANCE_STORE_PATH env var)
+  - PDF upload with Azure Document Intelligence OCR for evidence extraction
+  - LLM draft summary: Azure OpenAI generates solicitor-facing summary text only
 - 2025-12-29: TA6 Property Information Form extraction and risk analysis pipeline
   - New endpoint: POST /documents/ta6-risk
   - Map-reduce strategy for large TA6 documents (30+ pages)

@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from nomoros_ai.config import settings, validate_azure_credentials
-from nomoros_ai.routers import documents
+from nomoros_ai.routers import documents, compliance
 from nomoros_ai.models.document import HealthResponse
 from nomoros_ai.auth import validate_api_key_configured
 
@@ -49,6 +49,7 @@ app = FastAPI(
 
 # Include routers
 app.include_router(documents.router)
+app.include_router(compliance.router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["health"])
