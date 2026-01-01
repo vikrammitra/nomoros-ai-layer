@@ -25,8 +25,8 @@ class AzureOpenAIConfig(BaseModel):
     """Configuration for Azure OpenAI service."""
     endpoint: str
     api_key: str
-    deployment_name: str = "gpt-4o"  # Default to GPT-4o
-    api_version: str = "2024-02-15-preview"
+    deployment_name: str = settings.azure_openai_deployment or "gpt-4o"
+    api_version: str = settings.azure_openai_api_version
 
 
 class AzureOpenAIClient:

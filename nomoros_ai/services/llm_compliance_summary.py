@@ -8,7 +8,6 @@ CRITICAL DESIGN PRINCIPLE:
 - If LLM fails, a deterministic fallback is used (endpoint never fails)
 """
 
-import os
 import json
 import logging
 from typing import Optional
@@ -74,10 +73,12 @@ async def generate_llm_compliance_draft(
     
     If LLM fails for any reason, returns a deterministic fallback.
     """
-    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
-    api_key = os.environ.get("AZURE_OPENAI_API_KEY")
-    deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT")
-    api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+    from nomoros_ai.config import settings as app_settings
+    
+    endpoint = app_settings.azure_openai_endpoint
+    api_key = app_settings.openai_key
+    deployment = app_settings.azure_openai_deployment
+    api_version = app_settings.azure_openai_api_version
     
     if not endpoint or not api_key or not deployment:
         logger.warning("Azure OpenAI not configured, using fallback summary")
