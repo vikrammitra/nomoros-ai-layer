@@ -22,7 +22,7 @@ from typing import Literal, get_args
 from nomoros_ai.models.classification import DocumentClassification
 
 # Valid document types - must match the Literal in DocumentClassification
-DocumentType = Literal["TITLE_REGISTER", "TA6", "SEARCH", "LEASE", "UNKNOWN"]
+DocumentType = Literal["TITLE_REGISTER", "TA6", "SEARCH", "LEASE", "COMPLIANCE_AML_ID", "COMPLIANCE_SOF", "UNKNOWN"]
 
 # Classification rules: each document type has a list of indicator phrases
 # If ANY phrase matches (case-insensitive), the document type is a candidate
@@ -51,6 +51,22 @@ CLASSIFICATION_RULES = {
         "landlord",
         "tenant",
         "ground rent",
+    ],
+    "COMPLIANCE_AML_ID": [
+        "thirdfort",
+        "credas",
+        "identity verification",
+        "aml check",
+        "anti-money laundering",
+        "pep screening",
+        "sanctions screening",
+    ],
+    "COMPLIANCE_SOF": [
+        "source of funds",
+        "source of wealth",
+        "bank statement",
+        "salary slip",
+        "gift letter",
     ],
 }
 
@@ -162,6 +178,10 @@ def classify_document(text: str) -> DocumentClassification:
             reason = f"Detected conveyancing search indicators: {', '.join(matched_indicators)}"
         elif doc_type == "LEASE":
             reason = f"Detected lease document indicators: {', '.join(matched_indicators)}"
+        elif doc_type == "COMPLIANCE_AML_ID":
+            reason = f"Detected AML/ID verification report indicators: {', '.join(matched_indicators)}"
+        elif doc_type == "COMPLIANCE_SOF":
+            reason = f"Detected Source of Funds evidence indicators: {', '.join(matched_indicators)}"
         else:
             reason = f"Matched indicators: {', '.join(matched_indicators)}"
         
@@ -229,6 +249,8 @@ class DocumentClassifier:
             "TA6": "TA6 Form",
             "SEARCH": "Search",
             "LEASE": "Lease",
+            "COMPLIANCE_AML_ID": "AML/ID Report",
+            "COMPLIANCE_SOF": "Source of Funds",
             "UNKNOWN": "Unknown",
         }
         

@@ -31,6 +31,8 @@ class DocumentClassification(BaseModel):
         "TA6",
         "SEARCH",
         "LEASE",
+        "COMPLIANCE_AML_ID",
+        "COMPLIANCE_SOF",
         "UNKNOWN"
     ]
     reason: str

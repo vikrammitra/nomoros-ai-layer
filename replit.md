@@ -84,6 +84,11 @@ uvicorn nomoros_ai.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ## Recent Changes
+- 2026-01-01: Document classifier updated to detect compliance documents
+  - New document types: COMPLIANCE_AML_ID, COMPLIANCE_SOF
+  - AML/ID markers: thirdfort, credas, identity verification, aml check, pep screening, sanctions screening
+  - SOF markers: source of funds, source of wealth, bank statement, salary slip, gift letter
+  - Ingest endpoint now classifies compliance documents automatically
 - 2026-01-01: AML/ID and Source of Funds compliance ingest endpoint
   - New endpoints: POST /documents/compliance/ingest, GET /documents/compliance/{matter_id}
   - CRITICAL DESIGN: Deterministic statuses are the ONLY source of truth

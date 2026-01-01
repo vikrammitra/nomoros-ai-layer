@@ -101,6 +101,39 @@ CLASSIFICATION_MARKERS = {
         "service charge",
         "yielding and paying",
     ],
+    "COMPLIANCE_AML_ID": [
+        # AML/ID verification provider reports
+        "thirdfort",
+        "credas",
+        "identity verification",
+        "aml check",
+        "anti-money laundering",
+        "pep screening",
+        "sanctions screening",
+        "politically exposed person",
+        "adverse media",
+        "id verification",
+        "identity check",
+        "document verification",
+        "biometric verification",
+        "liveness check",
+    ],
+    "COMPLIANCE_SOF": [
+        # Source of Funds evidence documents
+        "source of funds",
+        "source of wealth",
+        "bank statement",
+        "salary slip",
+        "payslip",
+        "inheritance",
+        "gift letter",
+        "property sale",
+        "investment portfolio",
+        "dividend statement",
+        "pension statement",
+        "bonus payment",
+        "completion statement",
+    ],
 }
 
 CONFIDENCE_THRESHOLD = 0.35
