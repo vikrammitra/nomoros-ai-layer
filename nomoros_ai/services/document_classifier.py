@@ -102,37 +102,19 @@ CLASSIFICATION_MARKERS = {
         "yielding and paying",
     ],
     "COMPLIANCE_AML_ID": [
-        # AML/ID verification provider reports
+        # AML/ID verification provider reports - essential markers only
         "thirdfort",
         "credas",
-        "identity verification",
-        "aml check",
-        "anti-money laundering",
         "pep screening",
         "sanctions screening",
-        "politically exposed person",
-        "adverse media",
-        "id verification",
-        "identity check",
-        "document verification",
-        "biometric verification",
-        "liveness check",
+        "aml check",
     ],
     "COMPLIANCE_SOF": [
-        # Source of Funds evidence documents
+        # Source of Funds evidence - essential markers only
         "source of funds",
         "source of wealth",
         "bank statement",
-        "salary slip",
-        "payslip",
-        "inheritance",
         "gift letter",
-        "property sale",
-        "investment portfolio",
-        "dividend statement",
-        "pension statement",
-        "bonus payment",
-        "completion statement",
     ],
 }
 

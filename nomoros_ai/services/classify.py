@@ -55,17 +55,14 @@ CLASSIFICATION_RULES = {
     "COMPLIANCE_AML_ID": [
         "thirdfort",
         "credas",
-        "identity verification",
-        "aml check",
-        "anti-money laundering",
         "pep screening",
         "sanctions screening",
+        "aml check",
     ],
     "COMPLIANCE_SOF": [
         "source of funds",
         "source of wealth",
         "bank statement",
-        "salary slip",
         "gift letter",
     ],
 }
