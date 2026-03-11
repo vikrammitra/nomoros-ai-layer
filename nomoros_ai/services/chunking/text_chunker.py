@@ -27,10 +27,11 @@ class TextChunker:
     3. Ensure each chunk is within token-safe limits
     """
     
-    # Target chunk size in characters (approx 800-1000 tokens)
+    # Target chunk size in characters (approx 2000-2500 tokens)
     # Larger chunks = fewer API calls, faster processing
-    DEFAULT_CHUNK_SIZE = 3500
-    MAX_CHUNK_SIZE = 4000
+    # gpt-5-nano-2 supports 128K context, so we can use larger chunks safely
+    DEFAULT_CHUNK_SIZE = 8000
+    MAX_CHUNK_SIZE = 10000
     MIN_CHUNK_SIZE = 500
     
     # Common section heading patterns in Local Authority Searches
@@ -127,26 +128,35 @@ class TextChunker:
     
     def _sections_to_chunks(self, sections: list[tuple[str, str]]) -> list[TextChunk]:
         """
-        Convert sections to chunks, splitting large sections if needed.
+        Convert sections to chunks, merging small sections and splitting large ones.
         """
         chunks = []
         chunk_index = 0
+        
+        pending_content = []
+        pending_titles = []
+        pending_size = 0
         
         for section_title, content in sections:
             content = content.strip()
             if not content:
                 continue
             
-            # If section is within size limit, keep it whole
-            if len(content) <= self.MAX_CHUNK_SIZE:
-                chunks.append(TextChunk(
-                    content=f"[{section_title}]\n{content}",
-                    chunk_index=chunk_index,
-                    section_title=section_title
-                ))
-                chunk_index += 1
-            else:
-                # Split large section into sub-chunks
+            section_text = f"[{section_title}]\n{content}"
+            section_size = len(section_text)
+            
+            if section_size > self.MAX_CHUNK_SIZE:
+                if pending_content:
+                    chunks.append(TextChunk(
+                        content='\n\n'.join(pending_content),
+                        chunk_index=chunk_index,
+                        section_title=', '.join(pending_titles)
+                    ))
+                    chunk_index += 1
+                    pending_content = []
+                    pending_titles = []
+                    pending_size = 0
+                
                 sub_chunks = self._split_large_text(content, section_title)
                 for sub in sub_chunks:
                     chunks.append(TextChunk(
@@ -155,6 +165,27 @@ class TextChunker:
                         section_title=section_title
                     ))
                     chunk_index += 1
+            elif pending_size + section_size > self.DEFAULT_CHUNK_SIZE and pending_content:
+                chunks.append(TextChunk(
+                    content='\n\n'.join(pending_content),
+                    chunk_index=chunk_index,
+                    section_title=', '.join(pending_titles)
+                ))
+                chunk_index += 1
+                pending_content = [section_text]
+                pending_titles = [section_title]
+                pending_size = section_size
+            else:
+                pending_content.append(section_text)
+                pending_titles.append(section_title)
+                pending_size += section_size
+        
+        if pending_content:
+            chunks.append(TextChunk(
+                content='\n\n'.join(pending_content),
+                chunk_index=chunk_index,
+                section_title=', '.join(pending_titles)
+            ))
         
         return chunks
     
