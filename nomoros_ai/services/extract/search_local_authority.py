@@ -220,7 +220,10 @@ Return valid JSON. Use empty arrays [] if nothing found for a category.
         
         # Post-process: Check source_sections for key entries that might
         # have been miscategorized as section headings
+        # Only check short, single section titles (not merged comma-separated lists)
         for section in source_sections:
+            if len(section) > 200:
+                continue
             section_lower = section.lower()
             # Section 106 agreements
             if "section 106" in section_lower or "planning agreement" in section_lower:
