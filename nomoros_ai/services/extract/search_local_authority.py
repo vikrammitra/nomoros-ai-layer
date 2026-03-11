@@ -220,17 +220,23 @@ Return valid JSON. Use empty arrays [] if nothing found for a category.
         
         # Post-process: Check source_sections for key entries that might
         # have been miscategorized as section headings
-        # Only check short, single section titles (not merged comma-separated lists)
+        # Only check single section titles that contain substantive content
         for section in source_sections:
-            if len(section) > 200:
+            if len(section) > 150 or ',' in section:
                 continue
             section_lower = section.lower()
-            # Section 106 agreements
-            if "section 106" in section_lower or "planning agreement" in section_lower:
+            is_heading_only = section_lower.strip() in [
+                "section 106", "cil", "community infrastructure levy",
+                "local land charges", "planning register", "roads",
+            ]
+            if is_heading_only:
+                continue
+            # Section 106 agreements with substantive detail
+            if ("section 106" in section_lower or "planning agreement" in section_lower) and len(section) > 30:
                 if section not in local_land_charges:
                     local_land_charges.add(section)
-            # CIL references
-            if "cil" in section_lower or "community infrastructure levy" in section_lower:
+            # CIL references with substantive detail
+            if ("cil" in section_lower or "community infrastructure levy" in section_lower) and len(section) > 15:
                 if section not in cil_liability:
                     cil_liability.add(section)
         

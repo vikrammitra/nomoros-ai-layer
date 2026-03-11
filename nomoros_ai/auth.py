@@ -12,6 +12,7 @@ Security notes:
 
 import os
 import secrets
+from typing import Optional
 from fastapi import Header, HTTPException, status
 
 
@@ -34,7 +35,7 @@ def get_api_key() -> str:
     return api_key
 
 
-async def verify_api_key(x_api_key: str = Header(..., alias="x-api-key")) -> str:
+async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="x-api-key")) -> str:
     """
     FastAPI dependency to verify the API key from request headers.
     
@@ -52,6 +53,12 @@ async def verify_api_key(x_api_key: str = Header(..., alias="x-api-key")) -> str
     Raises:
         HTTPException: 401 if key is missing or invalid
     """
+    if not x_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized"
+        )
+    
     expected_key = get_api_key()
     
     # Use constant-time comparison to prevent timing attacks

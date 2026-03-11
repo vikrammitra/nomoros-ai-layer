@@ -83,19 +83,19 @@ class ComplianceExtractor:
         if ref_match:
             result.provider_reference = ref_match.group(1)
         
-        date_match = re.search(r'(?:verification date)[:\s]+(\d{4}-\d{2}-\d{2}[^\n]*)', text, re.IGNORECASE)
+        date_match = re.search(r'(?:verification date)[:\s]+(\d{4}-\d{2}-\d{2}[^\n]*|\d{2}/\d{2}/\d{4}[^\n]*)', text, re.IGNORECASE)
         if date_match:
             result.verification_date = date_match.group(1).strip()
         
-        status_match = re.search(r'(?:deterministic status[^\n]*)\n?\s*(PASSED|FAILED|REVIEW_REQUIRED|PENDING)', text, re.IGNORECASE)
+        status_match = re.search(r'(?:deterministic status[^\n]*)\n?\s*(PASSED|FAILED|REVIEW[_\s]REQUIRED|PENDING)', text, re.IGNORECASE)
         if status_match:
-            result.deterministic_status = status_match.group(1).upper()
+            result.deterministic_status = status_match.group(1).upper().replace(' ', '_')
         
         name_match = re.search(r'(?:full name|applicant name)[:\s]+([A-Za-z\s]+?)(?:\n|DOB|$)', text, re.IGNORECASE)
         if name_match:
             result.applicant_name = name_match.group(1).strip()
         
-        dob_match = re.search(r'(?:DOB|date of birth)[:\s]+(\d{4}-\d{2}-\d{2})', text, re.IGNORECASE)
+        dob_match = re.search(r'(?:DOB|date of birth)[:\s]+(\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4})', text, re.IGNORECASE)
         if dob_match:
             result.applicant_dob = dob_match.group(1)
         
@@ -128,13 +128,13 @@ class ComplianceExtractor:
         if ref_match:
             result.sof_reference = ref_match.group(1)
         
-        date_match = re.search(r'(?:pack date)[:\s]+(\d{4}-\d{2}-\d{2}[^\n]*)', text, re.IGNORECASE)
+        date_match = re.search(r'(?:pack date)[:\s]+(\d{4}-\d{2}-\d{2}[^\n]*|\d{2}/\d{2}/\d{4}[^\n]*)', text, re.IGNORECASE)
         if date_match:
             result.pack_date = date_match.group(1).strip()
         
-        status_match = re.search(r'(?:deterministic status[^\n]*)\n?\s*(PASSED|FAILED|REVIEW_REQUIRED|PENDING)', text, re.IGNORECASE)
+        status_match = re.search(r'(?:deterministic status[^\n]*)\n?\s*(PASSED|FAILED|REVIEW[_\s]REQUIRED|PENDING)', text, re.IGNORECASE)
         if status_match:
-            result.deterministic_status = status_match.group(1).upper()
+            result.deterministic_status = status_match.group(1).upper().replace(' ', '_')
         
         primary_match = re.search(r'(?:primary source)[:\s]+([^\n]+)', text, re.IGNORECASE)
         if primary_match:
@@ -198,7 +198,7 @@ class ComplianceRiskAnalyzer:
                 evidence=f"Status: {extracted.deterministic_status}"
             ))
         
-        if extracted.pep_screening and "match" in extracted.pep_screening.lower():
+        if extracted.pep_screening and "match" in extracted.pep_screening.lower() and "no match" not in extracted.pep_screening.lower():
             risks.append(ComplianceRisk(
                 category="PEP Screening",
                 severity="HIGH",
