@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "w7aRK4igEjqO0Cg4v1I27"
+uri = "file://architecture.md"
+type = "text"
+title = "Nomoros AI Architecture Diagram"
